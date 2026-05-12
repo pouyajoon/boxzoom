@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:github-pages": "ng build --configuration github-pages && node scripts/prepare-github-pages.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

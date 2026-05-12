@@ -76,3 +76,23 @@ Run tests once:
 ```bash
 pnpm exec ng test --watch=false
 ```
+
+## GitHub Pages
+
+The app is configured for GitHub project pages at `/boxzoom/`.
+
+Build the static GitHub Pages artifact:
+
+```bash
+pnpm run build:github-pages
+```
+
+This creates `docs/` from the Angular build output, copies `index.html` to `404.html` for client-side route fallback, and writes `.nojekyll`.
+
+Deployment is handled by `.github/workflows/pages.yml`. In GitHub repository settings, set Pages to deploy from **GitHub Actions**.
+
+Important static hosting details:
+
+- `angular.json` has a `github-pages` build configuration with `baseHref: "/boxzoom/"`.
+- Dataset JSON files are loaded relative to `document.baseURI`, so they work both locally and under `/boxzoom/` on GitHub Pages.
+- `404.html` lets direct links like `/boxzoom/simpledom/data3` and `/boxzoom/domtransition/data3` load the Angular app.

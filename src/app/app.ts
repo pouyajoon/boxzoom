@@ -122,7 +122,7 @@ export class DataViewer implements OnInit {
     this.clearTransition();
 
     try {
-      const response = await fetch(`/${dataset}.json`);
+      const response = await fetch(new URL(`${dataset}.json`, document.baseURI));
       if (!response.ok) {
         throw new Error(`Could not load ${dataset}.json (${response.status})`);
       }
