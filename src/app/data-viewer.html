@@ -2,11 +2,11 @@
   <header class="toolbar">
     <div>
       <p class="eyebrow">{{ dataset() }}.json</p>
-      <h1>Box Tree View</h1>
+      <h1>{{ viewerTitle() }}</h1>
     </div>
 
     <div class="toolbar-actions">
-      <a class="home-link" routerLink="/">Datasets</a>
+      <a class="home-link" [routerLink]="homeRoute()">Datasets</a>
       <button class="back-button" type="button" [disabled]="currentPath().length <= 1" (click)="goBack()">
         Back
       </button>
@@ -26,7 +26,11 @@
   </nav>
 
   <section class="viewer" *ngIf="renderTree() as tree; else loadingState">
-    <div class="root-box">
+    <div
+      class="root-box"
+      [class.transition-mode]="mode() === 'domtransition'"
+      [class.parent-fading]="transitionClone() !== null"
+    >
       <span class="box-label">{{ tree.id }}</span>
 
       <div class="children-row" *ngIf="tree.children.length > 0; else emptyState">
@@ -34,6 +38,7 @@
           class="child-box"
           type="button"
           *ngFor="let child of tree.children; trackBy: trackById"
+          [class.transition-source]="isTransitioningChild(child)"
           (click)="onNodeClick($event, child)"
           (keydown)="onNodeKeydown($event, child)"
         >
@@ -42,6 +47,16 @@
       </div>
     </div>
   </section>
+
+  <div
+    class="transition-clone"
+    *ngIf="transitionClone() as clone"
+    [ngStyle]="clone.style"
+  >
+    <span class="transition-clone-label" [ngStyle]="clone.labelStyle">
+      {{ clone.id }}
+    </span>
+  </div>
 </main>
 
 <ng-template #loadingState>

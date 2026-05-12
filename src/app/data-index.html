@@ -1,17 +1,20 @@
 <main class="app-shell">
   <section class="home-panel">
     <p class="eyebrow">Boxzoom</p>
-    <h1>Choose a dataset</h1>
+    <h1>
+      {{
+        mode() === 'root'
+          ? 'Choose a viewer'
+          : mode() === 'domtransition'
+            ? 'DOM transition datasets'
+            : 'Simple DOM datasets'
+      }}
+    </h1>
 
     <div class="route-list">
-      <a class="route-card" routerLink="/data2">
-        <span>Data 2</span>
-        <small>/data2</small>
-      </a>
-
-      <a class="route-card" routerLink="/data3">
-        <span>France Geography</span>
-        <small>/data3</small>
+      <a class="route-card" *ngFor="let route of routes()" [routerLink]="route.path">
+        <span>{{ route.label }}</span>
+        <small>{{ route.path }}</small>
       </a>
     </div>
   </section>

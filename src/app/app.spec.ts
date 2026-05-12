@@ -45,18 +45,73 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should list the data routes', () => {
+  it('should list the root viewer routes', () => {
     TestBed.configureTestingModule({
       imports: [DataIndex],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: of({ mode: 'root' }),
+          },
+        },
+      ],
     });
 
     const fixture = TestBed.createComponent(DataIndex);
+    fixture.componentInstance.ngOnInit();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const routes = Array.from(compiled.querySelectorAll('.route-card')).map((link) => link.getAttribute('href'));
-    expect(routes).toEqual(['/data2', '/data3']);
+    expect(routes).toEqual(['/simpledom', '/domtransition']);
+  });
+
+  it('should list the simpledom data routes', () => {
+    TestBed.configureTestingModule({
+      imports: [DataIndex],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: of({ mode: 'simpledom' }),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DataIndex);
+    fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const routes = Array.from(compiled.querySelectorAll('.route-card')).map((link) => link.getAttribute('href'));
+    expect(routes).toEqual(['/simpledom/data2', '/simpledom/data3']);
+  });
+
+  it('should list the transition data route', () => {
+    TestBed.configureTestingModule({
+      imports: [DataIndex],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: of({ mode: 'domtransition' }),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DataIndex);
+    fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const routes = Array.from(compiled.querySelectorAll('.route-card')).map((link) => link.getAttribute('href'));
+    expect(routes).toEqual(['/domtransition/data3']);
   });
 
   it('should render only the current node and one child level', async () => {
@@ -67,7 +122,7 @@ describe('App', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            data: of({ dataset: 'data2' }),
+            data: of({ dataset: 'data2', mode: 'simpledom' }),
           },
         },
       ],
@@ -82,7 +137,7 @@ describe('App', () => {
     const rootLabel = compiled.querySelector('.box-label')?.textContent?.trim();
     const childLabels = Array.from(compiled.querySelectorAll('.child-box')).map((label) => label.textContent?.trim());
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('Box Tree View');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Simple DOM View');
     expect(rootLabel).toBe('a');
     expect(childLabels).toEqual(['a1', 'a2']);
   });
@@ -95,7 +150,7 @@ describe('App', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            data: of({ dataset: 'data2' }),
+            data: of({ dataset: 'data2', mode: 'simpledom' }),
           },
         },
       ],

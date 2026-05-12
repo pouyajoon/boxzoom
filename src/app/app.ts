@@ -13,6 +13,17 @@ type RenderNode = {
   children: TreeNode[];
 };
 
+type IndexMode = 'root' | 'simpledom' | 'domtransition';
+type ViewerMode = 'simpledom' | 'domtransition';
+
+type TransitionClone = {
+  id: string;
+  style: Record<string, string>;
+  labelStyle: Record<string, string>;
+};
+
+const DOM_TRANSITION_DURATION_MS = 900;
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
@@ -22,11 +33,53 @@ export class App {}
 
 @Component({
   selector: 'app-data-index',
-  imports: [RouterLink],
+  imports: [CommonModule, RouterLink],
   templateUrl: './data-index.html',
   styleUrl: './app.css'
 })
-export class DataIndex {}
+export class DataIndex implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+
+  readonly mode = signal<IndexMode>('root');
+  readonly routes = signal([
+    { label: 'Simple DOM', path: '/simpledom' },
+    { label: 'DOM Transition', path: '/domtransition' },
+  ]);
+
+  ngOnInit(): void {
+    this.route.data.subscribe((data) => {
+      const mode = this.resolveIndexMode(data['mode']);
+      this.mode.set(mode);
+      this.routes.set(this.routesForMode(mode));
+    });
+  }
+
+  private resolveIndexMode(mode: unknown): IndexMode {
+    if (mode === 'simpledom' || mode === 'domtransition') {
+      return mode;
+    }
+
+    return 'root';
+  }
+
+  private routesForMode(mode: IndexMode): Array<{ label: string; path: string }> {
+    if (mode === 'domtransition') {
+      return [{ label: 'France Geography', path: '/domtransition/data3' }];
+    }
+
+    if (mode === 'simpledom') {
+      return [
+        { label: 'Data 2', path: '/simpledom/data2' },
+        { label: 'France Geography', path: '/simpledom/data3' },
+      ];
+    }
+
+    return [
+      { label: 'Simple DOM', path: '/simpledom' },
+      { label: 'DOM Transition', path: '/domtransition' },
+    ];
+  }
+}
 
 @Component({
   selector: 'app-data-viewer',
@@ -36,17 +89,23 @@ export class DataIndex {}
 })
 export class DataViewer implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private transitionTimeout: number | null = null;
 
   readonly dataset = signal('data2');
+  readonly mode = signal<ViewerMode>('simpledom');
   readonly root = signal<TreeNode | null>(null);
   readonly currentNode = signal<TreeNode | null>(null);
   readonly currentPath = signal<string[]>([]);
   readonly renderTree = signal<RenderNode | null>(null);
   readonly errorMessage = signal('');
+  readonly transitionClone = signal<TransitionClone | null>(null);
+  readonly transitioningChildId = signal<string | null>(null);
 
   ngOnInit(): void {
     this.route.data.subscribe((data) => {
       const dataset = data['dataset'] === 'data3' ? 'data3' : 'data2';
+      const mode: ViewerMode = data['mode'] === 'domtransition' ? 'domtransition' : 'simpledom';
+      this.mode.set(mode);
       void this.loadDataset(dataset);
     });
   }
@@ -58,6 +117,7 @@ export class DataViewer implements OnInit {
     this.currentPath.set([]);
     this.renderTree.set(null);
     this.errorMessage.set('');
+    this.clearTransition();
 
     try {
       const response = await fetch(`/${dataset}.json`);
@@ -81,12 +141,7 @@ export class DataViewer implements OnInit {
 
   onNodeClick(event: MouseEvent, child: TreeNode): void {
     event.stopPropagation();
-    const currentPath = this.currentPath();
-    if (currentPath.length === 0) {
-      return;
-    }
-
-    this.showNode(child, [...currentPath, child.id]);
+    this.openChild(child, event.currentTarget);
   }
 
   onNodeKeydown(event: KeyboardEvent, child: TreeNode): void {
@@ -96,10 +151,7 @@ export class DataViewer implements OnInit {
 
     event.preventDefault();
     event.stopPropagation();
-    const currentPath = this.currentPath();
-    if (currentPath.length > 0) {
-      this.showNode(child, [...currentPath, child.id]);
-    }
+    this.openChild(child, event.currentTarget);
   }
 
   goBack(): void {
@@ -126,6 +178,121 @@ export class DataViewer implements OnInit {
 
   trackById(_index: number, node: TreeNode): string {
     return node.id;
+  }
+
+  homeRoute(): string {
+    return this.mode() === 'domtransition' ? '/domtransition' : '/simpledom';
+  }
+
+  viewerTitle(): string {
+    return this.mode() === 'domtransition' ? 'DOM Transition View' : 'Simple DOM View';
+  }
+
+  isTransitioningChild(child: TreeNode): boolean {
+    return this.transitioningChildId() === child.id;
+  }
+
+  private openChild(child: TreeNode, eventTarget: EventTarget | null): void {
+    const currentPath = this.currentPath();
+    if (currentPath.length === 0 || this.transitionClone()) {
+      return;
+    }
+
+    const nextPath = [...currentPath, child.id];
+    if (this.mode() === 'domtransition') {
+      this.animateChildToParent(eventTarget, child, nextPath);
+      return;
+    }
+
+    this.showNode(child, nextPath);
+  }
+
+  private animateChildToParent(eventTarget: EventTarget | null, child: TreeNode, nextPath: string[]): void {
+    const childElement = eventTarget instanceof HTMLElement ? eventTarget : null;
+    const parentElement = childElement?.closest<HTMLElement>('.root-box');
+    if (!childElement || !parentElement) {
+      this.showNode(child, nextPath);
+      return;
+    }
+
+    const start = childElement.getBoundingClientRect();
+    const end = parentElement.getBoundingClientRect();
+    const baseStyle = this.cloneStyle(start);
+    const childFontSize = window.getComputedStyle(childElement).fontSize;
+    const parentFontSize = window.getComputedStyle(parentElement).fontSize;
+
+    this.transitioningChildId.set(child.id);
+    this.transitionClone.set({
+      id: child.id,
+      style: baseStyle,
+      labelStyle: {
+        left: '14px',
+        right: '14px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        fontSize: childFontSize,
+      },
+    });
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        this.transitionClone.set({
+          id: child.id,
+          style: {
+            ...this.cloneStyle(end),
+            transition: this.transitionCss([
+              'left',
+              'top',
+              'width',
+              'height',
+              'border-radius',
+            ]),
+          },
+          labelStyle: {
+            left: '24px',
+            right: '24px',
+            top: '24px',
+            transform: 'translateY(0)',
+            fontSize: parentFontSize,
+            transition: this.transitionCss([
+              'left',
+              'right',
+              'top',
+              'transform',
+              'font-size',
+            ]),
+          },
+        });
+      });
+    });
+
+    this.transitionTimeout = window.setTimeout(() => {
+      this.showNode(child, nextPath);
+      this.clearTransition();
+    }, DOM_TRANSITION_DURATION_MS + 20);
+  }
+
+  private transitionCss(properties: string[]): string {
+    return properties.map((property) => `${property} ${DOM_TRANSITION_DURATION_MS}ms ease`).join(', ');
+  }
+
+  private cloneStyle(rect: DOMRect): Record<string, string> {
+    return {
+      position: 'fixed',
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    };
+  }
+
+  private clearTransition(): void {
+    if (this.transitionTimeout !== null) {
+      window.clearTimeout(this.transitionTimeout);
+      this.transitionTimeout = null;
+    }
+    this.transitionClone.set(null);
+    this.transitioningChildId.set(null);
   }
 
   private buildRenderNode(node: TreeNode, path: string[]): RenderNode {
