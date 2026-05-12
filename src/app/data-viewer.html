@@ -29,15 +29,16 @@
     <div
       class="root-box"
       [class.transition-mode]="mode() === 'domtransition'"
-      [class.parent-fading]="transitionClone() !== null"
+      [class.parent-fading]="parentFading()"
     >
       <span class="box-label">{{ tree.id }}</span>
 
       <div class="children-row" *ngIf="tree.children.length > 0; else emptyState">
         <button
-          class="child-box"
+          class="child-box animate__animated animate__bounceIn"
           type="button"
-          *ngFor="let child of tree.children; trackBy: trackById"
+          *ngFor="let child of tree.children; let index = index; trackBy: trackById"
+          [style.--child-index]="index"
           [class.transition-source]="isTransitioningChild(child)"
           (click)="onNodeClick($event, child)"
           (keydown)="onNodeKeydown($event, child)"

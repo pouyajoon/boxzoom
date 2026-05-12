@@ -23,6 +23,7 @@ type TransitionClone = {
 };
 
 const DOM_TRANSITION_DURATION_MS = 900;
+const DOM_TRANSITION_HANDOFF_MS = 1000;
 
 @Component({
   selector: 'app-root',
@@ -100,6 +101,7 @@ export class DataViewer implements OnInit {
   readonly errorMessage = signal('');
   readonly transitionClone = signal<TransitionClone | null>(null);
   readonly transitioningChildId = signal<string | null>(null);
+  readonly parentFading = signal(false);
 
   ngOnInit(): void {
     this.route.data.subscribe((data) => {
@@ -222,6 +224,7 @@ export class DataViewer implements OnInit {
     const parentFontSize = window.getComputedStyle(parentElement).fontSize;
 
     this.transitioningChildId.set(child.id);
+    this.parentFading.set(true);
     this.transitionClone.set({
       id: child.id,
       style: baseStyle,
@@ -268,8 +271,37 @@ export class DataViewer implements OnInit {
 
     this.transitionTimeout = window.setTimeout(() => {
       this.showNode(child, nextPath);
-      this.clearTransition();
+      this.parentFading.set(false);
+      this.fadeOutTransitionClone();
     }, DOM_TRANSITION_DURATION_MS + 20);
+  }
+
+  private fadeOutTransitionClone(): void {
+    const clone = this.transitionClone();
+    if (!clone) {
+      this.clearTransition();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      this.transitionClone.set({
+        id: clone.id,
+        style: {
+          ...clone.style,
+          opacity: '0',
+          transition: `${clone.style['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease`,
+        },
+        labelStyle: {
+          ...clone.labelStyle,
+          opacity: '0',
+          transition: `${clone.labelStyle['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease`,
+        },
+      });
+    });
+
+    this.transitionTimeout = window.setTimeout(() => {
+      this.clearTransition();
+    }, DOM_TRANSITION_HANDOFF_MS + 40);
   }
 
   private transitionCss(properties: string[]): string {
@@ -283,6 +315,7 @@ export class DataViewer implements OnInit {
       top: `${rect.top}px`,
       width: `${rect.width}px`,
       height: `${rect.height}px`,
+      opacity: '1',
     };
   }
 
@@ -293,6 +326,7 @@ export class DataViewer implements OnInit {
     }
     this.transitionClone.set(null);
     this.transitioningChildId.set(null);
+    this.parentFading.set(false);
   }
 
   private buildRenderNode(node: TreeNode, path: string[]): RenderNode {

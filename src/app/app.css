@@ -140,6 +140,8 @@ h1 {
   overflow-wrap: anywhere;
   text-align: center;
   white-space: normal;
+  --animate-duration: 680ms;
+  animation-delay: calc(var(--child-index, 0) * 70ms);
 }
 
 .child-box:hover {
@@ -155,6 +157,7 @@ h1 {
 
 .transition-source {
   opacity: 0.18;
+  animation: none;
 }
 
 .transition-clone {
