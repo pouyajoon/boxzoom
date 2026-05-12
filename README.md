@@ -81,6 +81,10 @@ pnpm exec ng test --watch=false
 
 The app is configured for GitHub project pages at `/boxzoom/`.
 
+Public URL:
+
+`https://pouyajoon.github.io/boxzoom/`
+
 Build the static GitHub Pages artifact:
 
 ```bash
