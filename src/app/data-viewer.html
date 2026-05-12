@@ -1,0 +1,55 @@
+<main class="app-shell">
+  <header class="toolbar">
+    <div>
+      <p class="eyebrow">{{ dataset() }}.json</p>
+      <h1>Box Tree View</h1>
+    </div>
+
+    <div class="toolbar-actions">
+      <a class="home-link" routerLink="/">Datasets</a>
+      <button class="back-button" type="button" [disabled]="currentPath().length <= 1" (click)="goBack()">
+        Back
+      </button>
+    </div>
+  </header>
+
+  <nav class="breadcrumb" aria-label="Current node path" *ngIf="currentPath().length > 0">
+    <button
+      class="crumb"
+      type="button"
+      *ngFor="let segment of currentPath(); let index = index"
+      [disabled]="index === currentPath().length - 1"
+      (click)="onBreadcrumbClick(index)"
+    >
+      {{ segment }}
+    </button>
+  </nav>
+
+  <section class="viewer" *ngIf="renderTree() as tree; else loadingState">
+    <div class="root-box">
+      <span class="box-label">{{ tree.id }}</span>
+
+      <div class="children-row" *ngIf="tree.children.length > 0; else emptyState">
+        <button
+          class="child-box"
+          type="button"
+          *ngFor="let child of tree.children; trackBy: trackById"
+          (click)="onNodeClick($event, child)"
+          (keydown)="onNodeKeydown($event, child)"
+        >
+          {{ child.id }}
+        </button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<ng-template #loadingState>
+  <section class="state">
+    {{ errorMessage() || 'Loading ' + dataset() + '.json...' }}
+  </section>
+</ng-template>
+
+<ng-template #emptyState>
+  <p class="empty-state">This node has no children.</p>
+</ng-template>

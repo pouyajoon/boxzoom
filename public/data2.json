@@ -3,19 +3,24 @@
   "children": [
     {
       "id": "a1",
-      "children": [{
-        "id": "a11",
-        "children": []
-      }, {
-        "id": "a12",
-        "children": []
-      }, {
-        "id": "a13",
-        "children": []
-      }, {
-        "id": "a14",
-        "children": []
-      }]
+      "children": [
+        {
+          "id": "a11",
+          "children": []
+        },
+        {
+          "id": "a12",
+          "children": []
+        },
+        {
+          "id": "a13",
+          "children": []
+        },
+        {
+          "id": "a14",
+          "children": []
+        }
+      ]
     },
     {
       "id": "a2",
