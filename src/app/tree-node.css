@@ -21,6 +21,33 @@
  *     visual effect is "the child has fully taken the parent's place".
  * =========================================================================== */
 
+/* ---- Animation timing variables -----------------------------------------
+ *
+ * Centralised so every transition in this file pulls from the same source
+ * of truth. Tweak any of these to retune the visual rhythm without hunting
+ * through individual rules.
+ *
+ *   --flip-duration         Duration of the box grow/shrink. MUST stay in
+ *                           sync with `UNIQ_FLIP_MS` in tree-node.ts — the
+ *                           CSS label slide and the JS-driven FLIP must
+ *                           finish on the same frame, otherwise the label
+ *                           overshoots/undershoots the box.
+ *   --flip-ease             Easing curve for the same family of animations.
+ *                           MUST match `UNIQ_FLIP_EASE` in tree-node.ts.
+ *   --chrome-fade-duration  Parent's border / background / shadow / label
+ *                           opacity fade-out when a deeper box becomes the
+ *                           new leaf-big.
+ *   --reveal-delay          How long the children grid waits before fading
+ *                           in. Lets the parent's FLIP get going first so
+ *                           the children don't flash in the wrong place.
+ *   --reveal-duration       Children grid fade-in.
+ *   --hide-duration         Children grid fade-out + sibling-faded opacity
+ *                           transition (going back, faster than reveal).
+ *   --hover-duration        Hover feedback on small tiles.
+ *   --soft-ease             Default easing for everything that isn't tied
+ *                           to the FLIP.
+ * --------------------------------------------------------------------------- */
+
 /* The host element <app-tree-node> must not participate in layout: when the
  * inner `.tree-node` div switches from grid-cell to `position: absolute`, we
  * want the grid to actually see one fewer item AND we want our ViewChild
@@ -29,6 +56,16 @@
  * layout-bearing element. */
 :host {
   display: contents;
+
+  --flip-duration: 1000ms;
+  --flip-ease: ease-in-out;
+
+  --chrome-fade-duration: 400ms;
+  --reveal-delay: 320ms;
+  --reveal-duration: 240ms;
+  --hide-duration: 220ms;
+  --hover-duration: 160ms;
+  --soft-ease: ease;
 }
 
 .tree-node {
@@ -83,9 +120,9 @@
   font-size: clamp(0.8rem, 1.4vw, 1.0rem);
   text-align: center;
   transition:
-    opacity 220ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+    opacity var(--hide-duration) var(--soft-ease),
+    border-color var(--hover-duration) var(--soft-ease),
+    box-shadow var(--hover-duration) var(--soft-ease);
 }
 
 .tree-node--small:hover {
@@ -121,16 +158,16 @@
   overflow: hidden;
   overflow-wrap: anywhere;
   text-align: center;
-  /* Duration and easing kept in sync with UNIQ_FLIP_MS / UNIQ_FLIP_EASE
-   * in tree-node.ts so the label finishes sliding on the same frame the
-   * FLIP transform reaches identity. */
+  /* `--flip-duration` / `--flip-ease` MUST stay in sync with UNIQ_FLIP_MS /
+   * UNIQ_FLIP_EASE in tree-node.ts so the label finishes sliding on the same
+   * frame the FLIP transform reaches identity. */
   transition:
-    top 1000ms ease-in-out,
-    left 1000ms ease-in-out,
-    right 1000ms ease-in-out,
-    transform 1000ms ease-in-out,
-    font-size 1000ms ease-in-out,
-    opacity 400ms ease;
+    top var(--flip-duration) var(--flip-ease),
+    left var(--flip-duration) var(--flip-ease),
+    right var(--flip-duration) var(--flip-ease),
+    transform var(--flip-duration) var(--flip-ease),
+    font-size var(--flip-duration) var(--flip-ease),
+    opacity var(--chrome-fade-duration) var(--soft-ease);
 }
 
 /* Small label: centered in its tile (place-items: center on the host doesn't
@@ -170,7 +207,7 @@
   opacity: 0;
   pointer-events: none;
   /* Fade out fast when the parent stops being big (shrinking animation). */
-  transition: opacity 220ms ease;
+  transition: opacity var(--hide-duration) var(--soft-ease);
 }
 
 /* Fade the children grid IN only once the FLIP is close to its destination,
@@ -179,7 +216,7 @@
 .tree-node--big > .tree-node__content {
   opacity: 1;
   pointer-events: auto;
-  transition: opacity 240ms ease 320ms;
+  transition: opacity var(--reveal-duration) var(--soft-ease) var(--reveal-delay);
 }
 
 .tree-node__empty {
@@ -198,12 +235,12 @@
   letter-spacing: normal;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms ease;
+  transition: opacity var(--hide-duration) var(--soft-ease);
 }
 
 .tree-node--big > .tree-node__empty {
   opacity: 1;
-  transition: opacity 240ms ease 320ms;
+  transition: opacity var(--reveal-duration) var(--soft-ease) var(--reveal-delay);
 }
 
 /* ---- Parent fade-out -----------------------------------------------------
@@ -218,9 +255,9 @@
   border-color: transparent;
   box-shadow: none;
   transition:
-    background 400ms ease,
-    border-color 400ms ease,
-    box-shadow 400ms ease;
+    background var(--chrome-fade-duration) var(--soft-ease),
+    border-color var(--chrome-fade-duration) var(--soft-ease),
+    box-shadow var(--chrome-fade-duration) var(--soft-ease);
 }
 
 .tree-node--big:not(.tree-node--leaf-big) > .tree-node__label {

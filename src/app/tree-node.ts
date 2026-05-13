@@ -277,16 +277,30 @@ export class TreeNodeView implements OnInit, OnDestroy {
       return;
     }
 
-    const dx = oldRect.left - newRect.left;
-    const dy = oldRect.top - newRect.top;
     const sx = oldRect.width / newRect.width;
     const sy = oldRect.height / newRect.height;
 
+    /*
+     * Uniform scale prevents the visible "twist" / "shear" effect on text
+     * and other descendants of the FLIPped box: with `scale(sx, sy)` where
+     * sx ≠ sy, every glyph is stretched asymmetrically in x and y during
+     * the animation, which the eye reads as the text wobbling. We use the
+     * geometric mean so the area of the scaled-down box at t=0 matches the
+     * area of the original grid cell — visually the closest equivalent.
+     *
+     * The trade-off is that the scaled box no longer fits the grid cell
+     * exactly at t=0; we re-center it on the grid cell's center so the
+     * mismatch is symmetric on all four sides (a few pixels, imperceptible
+     * in practice).
+     */
+    const s = Math.sqrt(sx * sy);
+    const oldCenterX = oldRect.left + oldRect.width / 2;
+    const oldCenterY = oldRect.top + oldRect.height / 2;
+    const dx = oldCenterX - newRect.left - (newRect.width * s) / 2;
+    const dy = oldCenterY - newRect.top - (newRect.height * s) / 2;
+
     const stillEnough =
-      Math.abs(dx) < 0.5 &&
-      Math.abs(dy) < 0.5 &&
-      Math.abs(sx - 1) < 0.005 &&
-      Math.abs(sy - 1) < 0.005;
+      Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(s - 1) < 0.005;
     if (stillEnough) {
       return;
     }
@@ -295,11 +309,11 @@ export class TreeNodeView implements OnInit, OnDestroy {
     this.currentAnimation = el.animate(
       [
         {
-          transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`,
+          transform: `translate(${dx}px, ${dy}px) scale(${s})`,
           transformOrigin: 'top left',
         },
         {
-          transform: 'translate(0, 0) scale(1, 1)',
+          transform: 'translate(0, 0) scale(1)',
           transformOrigin: 'top left',
         },
       ],
