@@ -83,7 +83,7 @@ The app is configured for GitHub project pages at `/boxzoom/`.
 
 Public URL:
 
-`https://pouyajoon.github.io/boxzoom/`
+[https://pouyajoon.github.io/boxzoom/](https://pouyajoon.github.io/boxzoom/)
 
 The **`docs/`** folder in this repository is the published static site. It is committed on purpose so you can use **Deploy from a branch** and avoid GitHub Actions `deploy-pages` (no special repo permissions or “first deploy” API quirks).
 
@@ -107,6 +107,15 @@ The **`docs/`** folder in this repository is the published static site. It is co
 
 GitHub builds nothing; it only serves the files already in **`docs/`**.
 
+### Site returns 404 at `https://pouyajoon.github.io/boxzoom/`
+
+The static files are in the repo (for example [`docs/index.html` on `main`](https://raw.githubusercontent.com/pouyajoon/boxzoom/main/docs/index.html)). A **404** on the Pages URL almost always means **Pages is not publishing `main` + `/docs`**.
+
+1. Open [Pages settings](https://github.com/pouyajoon/boxzoom/settings/pages).
+2. **Build and deployment → Source** must be **Deploy from a branch** (not **GitHub Actions**). This repo no longer deploys via Actions; if Source is still **GitHub Actions**, GitHub will not serve the committed **`docs/`** folder and the site can stay empty or 404.
+3. Branch **`main`**, folder **`/docs`** (not the repository **root** — there is no `index.html` at the repo root).
+4. Save, wait a minute, then check the green banner on that settings page for the live URL. Hard-refresh or try an incognito window if you still see an old 404.
+
 ### Test locally (same paths as GitHub Pages)
 
 ```bash
@@ -127,6 +136,8 @@ The **Verify Pages build** workflow (`.github/workflows/pages-build-verify.yml`)
 
 ### Static hosting notes
 
-- `angular.json` has a `github-pages` configuration with **`baseHref: "/boxzoom/"`**.
+- `angular.json` sets **`baseHref: "/boxzoom/"`** so direct links and hard reloads work on project-page URLs like **`https://pouyajoon.github.io/boxzoom/...`** (see the note below on why a “pathless” base is usually a bad tradeoff).
 - Dataset JSON is loaded relative to **`document.baseURI`**, so it works under **`/boxzoom/`**.
 - **`404.html`** matches **`index.html`** so deep links load the Angular app.
+
+**Why not drop `/boxzoom/` from `<base>`?** A relative base such as `./` matches **`npx http-server docs`** when you stay on **`/`**, but on a URL like **`.../boxzoom/simpledom/data3`** the browser resolves scripts against **`.../boxzoom/simpledom/`**, so hashed bundles miss and the app breaks on refresh or shared deep links. GitHub project pages live under **`/repo-name/`**, so the production build keeps **`baseHref: "/boxzoom/"`**. To preview locally without that prefix, use **`pnpm run build:preview:github-pages`** (serves under **`/boxzoom/`**) or **`pnpm start`** for dev.
