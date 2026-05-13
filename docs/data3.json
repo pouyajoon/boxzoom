@@ -2,52 +2,62 @@
   "id": "France",
   "children": [
     {
-      "id": "Ile-de-France",
+      "id": "Factory 1",
+      "backgroundImageUrl": "images/factory1.webp",
+      "imageMap": {
+        "imageUrl": "images/factory1.webp",
+        "width": 800,
+        "height": 450,
+        "zones": [
+          {
+            "childId": "Assembly Hall",
+            "label": "Assembly hall",
+            "description": "Main line and workstations (north side of the hall)",
+            "polygon": [
+              [0.04, 0.14],
+              [0.46, 0.12],
+              [0.48, 0.58],
+              [0.06, 0.6]
+            ]
+          },
+          {
+            "childId": "Storage Bay",
+            "label": "Storage bay",
+            "description": "Inbound parts and pallet storage (east wing)",
+            "polygon": [
+              [0.5, 0.15],
+              [0.96, 0.2],
+              [0.94, 0.78],
+              [0.52, 0.62]
+            ]
+          }
+        ]
+      },
       "children": [
         {
-          "id": "Paris",
+          "id": "Assembly Hall",
+          "backgroundImageUrl": "images/factory2.jpg",
           "children": [
             {
-              "id": "Paris",
+              "id": "Station North",
+              "children": []
+            },
+            {
+              "id": "Station South",
               "children": []
             }
           ]
         },
         {
-          "id": "Hauts-de-Seine",
+          "id": "Storage Bay",
+          "backgroundImageUrl": "images/factory1.webp",
           "children": [
             {
-              "id": "Boulogne-Billancourt",
+              "id": "Inbound dock",
               "children": []
             },
             {
-              "id": "Nanterre",
-              "children": []
-            }
-          ]
-        },
-        {
-          "id": "Seine-Saint-Denis",
-          "children": [
-            {
-              "id": "Saint-Denis",
-              "children": []
-            },
-            {
-              "id": "Montreuil",
-              "children": []
-            }
-          ]
-        },
-        {
-          "id": "Val-de-Marne",
-          "children": [
-            {
-              "id": "Creteil",
-              "children": []
-            },
-            {
-              "id": "Vitry-sur-Seine",
+              "id": "Cold storage",
               "children": []
             }
           ]

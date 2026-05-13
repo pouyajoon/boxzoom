@@ -33,19 +33,73 @@
     >
       <span class="box-label">{{ tree.id }}</span>
 
-      <div class="children-row" *ngIf="tree.children.length > 0; else emptyState">
-        <button
-          class="child-box animate__animated animate__bounceIn"
-          type="button"
-          *ngFor="let child of tree.children; let index = index; trackBy: trackById"
-          [style.--child-index]="index"
-          [class.transition-source]="isTransitioningChild(child)"
-          (click)="onNodeClick($event, child)"
-          (keydown)="onNodeKeydown($event, child)"
-        >
-          {{ child.id }}
-        </button>
-      </div>
+      <ng-container *ngIf="tree.children.length > 0; else emptyState">
+        <div class="image-map-panel" *ngIf="tree.imageMap as im; else classicChildren">
+          <svg
+            class="image-map-svg"
+            [attr.viewBox]="'0 0 ' + im.viewWidth + ' ' + im.viewHeight"
+            preserveAspectRatio="xMidYMid meet"
+            role="group"
+            [attr.aria-label]="'Interactive map for ' + tree.id"
+          >
+            <image
+              class="image-map-photo"
+              [attr.href]="im.imageUrl"
+              x="0"
+              y="0"
+              [attr.width]="im.viewWidth"
+              [attr.height]="im.viewHeight"
+              preserveAspectRatio="xMidYMid meet"
+              tabindex="-1"
+            />
+            <g
+              *ngFor="let zone of im.zones; let zIndex = index; trackBy: trackByZoneChildId"
+              class="image-map-zone-group animate__animated animate__bounceIn"
+              [style.--child-index]="zIndex"
+            >
+              <polygon
+                class="image-map-zone"
+                [attr.points]="zone.pointsAttr"
+                [attr.aria-label]="zone.child.id"
+                role="button"
+                tabindex="0"
+                [attr.title]="zone.tooltip"
+                [class.transition-source]="isTransitioningChild(zone.child)"
+                (click)="onImageZoneClick($event, zone.child)"
+                (keydown)="onImageZoneKeydown($event, zone.child)"
+              />
+              <text
+                class="image-map-zone-label"
+                pointer-events="none"
+                [attr.x]="zone.labelCenterX"
+                [attr.y]="zone.labelCenterY"
+                text-anchor="middle"
+                dominant-baseline="middle"
+                [attr.font-size]="imageMapLabelFont(im.viewWidth)"
+              >
+                {{ zone.child.id }}
+              </text>
+            </g>
+          </svg>
+        </div>
+        <ng-template #classicChildren>
+          <div class="children-row">
+            <button
+              class="child-box animate__animated animate__bounceIn"
+              type="button"
+              *ngFor="let child of tree.children; let index = index; trackBy: trackById"
+              [style.--child-index]="index"
+              [class.child-box-has-bg]="childBoxHasBackground(child)"
+              [ngStyle]="childBoxStyle(child)"
+              [class.transition-source]="isTransitioningChild(child)"
+              (click)="onNodeClick($event, child)"
+              (keydown)="onNodeKeydown($event, child)"
+            >
+              <span class="child-box-label">{{ child.id }}</span>
+            </button>
+          </div>
+        </ng-template>
+      </ng-container>
     </div>
   </section>
 

@@ -1,0 +1,16 @@
+---
+description: Règles de développement du projet boxzoom (Git, conventions, etc.) — étendre ce fichier avec de nouvelles sections.
+alwaysApply: true
+---
+
+# Developer rules (boxzoom)
+
+Ce fichier centralise les règles à suivre dans ce dépôt. **Ajouter de nouvelles sections** ci-dessous pour tout autre sujet (style de code, tests, déploiement, etc.).
+
+## Git — pas d’automatisation des commits
+
+- **Ne pas** exécuter `git commit` ni `git push`, sauf si l’utilisateur le demande **explicitement** dans la conversation (même après avoir terminé une tâche).
+- **Ne pas** exécuter `git add` / staging pour valider des changements à la place de l’utilisateur, sauf demande explicite — il veut voir les diffs et committer lui-même.
+- À la fin d’un travail : résumer les fichiers modifiés et, si utile, proposer un **message de commit** en texte ; laisser l’utilisateur lancer commit / push depuis son environnement.
+
+Les commandes de **lecture** (`git status`, `git diff`, `git log`, etc.) restent permises pour diagnostiquer ou expliquer l’état du dépôt.
