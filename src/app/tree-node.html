@@ -1,0 +1,30 @@
+<div
+  #box
+  class="tree-node"
+  [class.tree-node--big]="isBig()"
+  [class.tree-node--small]="!isBig()"
+  [class.tree-node--leaf-big]="isLeafBig()"
+  [class.tree-node--root]="isRoot"
+  [class.tree-node--sibling-faded]="isSiblingFaded()"
+  [attr.role]="isBig() ? null : 'button'"
+  [attr.tabindex]="isBig() ? null : '0'"
+  [attr.aria-label]="node.id"
+  [attr.aria-expanded]="isBig()"
+  (click)="onClick($event)"
+  (keydown)="onKeydown($event)"
+>
+  <span class="tree-node__label">{{ node.id }}</span>
+
+  <div class="tree-node__content" *ngIf="node.children.length > 0">
+    <app-tree-node
+      *ngFor="let child of node.children; let i = index; trackBy: trackById"
+      [node]="child"
+      [path]="childPaths[i]"
+      [indexFromParent]="i"
+    />
+  </div>
+
+  <p class="tree-node__empty" *ngIf="node.children.length === 0 && isLeafBig()">
+    This node has no children.
+  </p>
+</div>

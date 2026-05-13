@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
-import { DataIndex, DataViewer } from './app';
+import { DataIndex } from './data-index';
+import { DataViewer } from './data-viewer';
+import { UniqDomViewer } from './uniqdom-viewer';
 
 export const routes: Routes = [
   {
@@ -37,6 +39,24 @@ export const routes: Routes = [
     component: DataViewer,
     data: { dataset: 'data3', mode: 'domtransition' },
     title: 'DOM Transition Data 3',
+  },
+  {
+    path: 'uniqdom',
+    component: DataIndex,
+    data: { mode: 'uniqdom' },
+    title: 'Uniq DOM datasets',
+  },
+  {
+    path: 'uniqdom/data2',
+    component: UniqDomViewer,
+    data: { dataset: 'data2', mode: 'uniqdom' },
+    title: 'Uniq DOM Data 2',
+  },
+  {
+    path: 'uniqdom/data3',
+    component: UniqDomViewer,
+    data: { dataset: 'data3', mode: 'uniqdom' },
+    title: 'Uniq DOM Data 3',
   },
   {
     path: '**',

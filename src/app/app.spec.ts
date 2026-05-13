@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { App, DataIndex, DataViewer } from './app';
+import { App } from './app';
+import { DataIndex } from './data-index';
+import { DataViewer } from './data-viewer';
+import { UniqDomViewer } from './uniqdom-viewer';
 
 const data2 = {
   id: 'a',
@@ -101,7 +104,30 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const routes = Array.from(compiled.querySelectorAll('.route-card')).map((link) => link.getAttribute('href'));
-    expect(routes).toEqual(['/simpledom', '/domtransition']);
+    expect(routes).toEqual(['/simpledom', '/domtransition', '/uniqdom']);
+  });
+
+  it('should list the uniqdom data routes', () => {
+    TestBed.configureTestingModule({
+      imports: [DataIndex],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: of({ mode: 'uniqdom' }),
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(DataIndex);
+    fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const routes = Array.from(compiled.querySelectorAll('.route-card')).map((link) => link.getAttribute('href'));
+    expect(routes).toEqual(['/uniqdom/data2', '/uniqdom/data3']);
   });
 
   it('should list the simpledom data routes', () => {
@@ -268,6 +294,111 @@ describe('App', () => {
       expect(compiled.querySelector('.box-label')?.textContent?.trim()).toBe('Alpha');
       const childLabels = Array.from(compiled.querySelectorAll('.child-box')).map((label) => label.textContent?.trim());
       expect(childLabels).toEqual(['Alpha-leaf']);
+    });
+  });
+
+  describe('UniqDomViewer', () => {
+    it('should render the whole recursive tree at once', async () => {
+      TestBed.configureTestingModule({
+        imports: [UniqDomViewer],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              data: of({ dataset: 'data2', mode: 'uniqdom' }),
+            },
+          },
+        ],
+      });
+
+      const fixture = TestBed.createComponent(UniqDomViewer);
+      fixture.componentInstance.ngOnInit();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const ids = Array.from(compiled.querySelectorAll('.tree-node__label')).map((el) =>
+        el.textContent?.trim(),
+      );
+      // Every node from data2 lives in the DOM: root + a1 + a11 + a2.
+      expect(ids).toEqual(['a', 'a1', 'a11', 'a2']);
+
+      // Only the root is on the zoom path initially.
+      const big = Array.from(compiled.querySelectorAll('.tree-node--big')).map((el) =>
+        el.getAttribute('aria-label'),
+      );
+      expect(big).toEqual(['a']);
+    });
+
+    it('should zoom into a clicked child without re-creating its DOM', async () => {
+      TestBed.configureTestingModule({
+        imports: [UniqDomViewer],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              data: of({ dataset: 'data2', mode: 'uniqdom' }),
+            },
+          },
+        ],
+      });
+
+      const fixture = TestBed.createComponent(UniqDomViewer);
+      fixture.componentInstance.ngOnInit();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const a1Before = compiled.querySelector<HTMLElement>('.tree-node[aria-label="a1"]');
+      expect(a1Before).not.toBeNull();
+      expect(a1Before!.classList.contains('tree-node--small')).toBe(true);
+
+      a1Before!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      const a1After = compiled.querySelector<HTMLElement>('.tree-node[aria-label="a1"]');
+      // Same DOM node, just toggled big/small classes — no re-render.
+      expect(a1After).toBe(a1Before);
+      expect(a1After!.classList.contains('tree-node--big')).toBe(true);
+      expect(a1After!.classList.contains('tree-node--small')).toBe(false);
+
+      // The sibling fades out instead of being removed.
+      const a2 = compiled.querySelector<HTMLElement>('.tree-node[aria-label="a2"]');
+      expect(a2).not.toBeNull();
+      expect(a2!.classList.contains('tree-node--sibling-faded')).toBe(true);
+    });
+
+    it('should walk back up via the Back button', async () => {
+      TestBed.configureTestingModule({
+        imports: [UniqDomViewer],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              data: of({ dataset: 'data2', mode: 'uniqdom' }),
+            },
+          },
+        ],
+      });
+
+      const fixture = TestBed.createComponent(UniqDomViewer);
+      fixture.componentInstance.ngOnInit();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const a1 = compiled.querySelector<HTMLElement>('.tree-node[aria-label="a1"]');
+      a1?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+      expect(a1!.classList.contains('tree-node--big')).toBe(true);
+
+      compiled.querySelector<HTMLElement>('.back-button')?.click();
+      fixture.detectChanges();
+      expect(a1!.classList.contains('tree-node--big')).toBe(false);
+      expect(a1!.classList.contains('tree-node--small')).toBe(true);
     });
   });
 });

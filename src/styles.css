@@ -7,3 +7,115 @@
 body {
   margin: 0;
 }
+
+/* ===========================================================================
+ * Global shell / chrome
+ *
+ * These rules are intentionally global (not component-scoped) because they
+ * style the page chrome that surrounds every viewer: the toolbar, the back
+ * button, breadcrumb buttons, the home link, the loading/error state card,
+ * and the shared `.viewer` column width. Putting them in component CSS
+ * would either bloat each component bundle or require duplicate rules.
+ * =========================================================================== */
+
+.app-shell {
+  min-height: 100dvh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.18), transparent 34%),
+    radial-gradient(circle at 85% 75%, rgba(34, 197, 94, 0.14), transparent 38%),
+    #020617;
+  color: #e5e7eb;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto 12px;
+  max-width: 960px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.back-button,
+.crumb,
+.home-link,
+.route-card {
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(15, 23, 42, 0.82);
+  color: #e5e7eb;
+}
+
+.back-button,
+.crumb,
+.home-link {
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.back-button,
+.home-link {
+  padding: 10px 16px;
+  font-weight: 700;
+}
+
+.home-link,
+.route-card {
+  text-decoration: none;
+}
+
+.back-button:disabled,
+.crumb:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 960px;
+  margin: 0 auto 18px;
+}
+
+.crumb {
+  padding: 6px 12px;
+}
+
+.viewer {
+  width: min(86vw, 760px);
+  margin: 0 auto;
+}
+
+.state {
+  max-width: 760px;
+  margin: 80px auto 0;
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #cbd5e1;
+  text-align: center;
+}

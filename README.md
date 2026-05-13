@@ -10,8 +10,13 @@ Boxzoom is an Angular app for browsing tree-shaped JSON data as nested boxes.
 - `/simpledom/data3` opens `public/data3.json` with the simple DOM viewer.
 - `/domtransition` lists the transition datasets.
 - `/domtransition/data3` opens `public/data3.json` with the DOM transition viewer.
+- `/uniqdom` lists the recursive (uniq DOM) datasets.
+- `/uniqdom/data2` opens `public/data2.json` with the recursive viewer.
+- `/uniqdom/data3` opens `public/data3.json` with the recursive viewer.
 
-Dataset routes share the same data-loading and tree navigation code. The route decides which JSON file to fetch and which viewer mode to use.
+Dataset routes share the data-loading scaffolding, but the **viewer mode**
+chosen by the route also picks the rendering strategy (see below for the
+differences between Simple DOM, DOM Transition, and Uniq DOM).
 
 ## Expected Behavior
 
@@ -35,9 +40,13 @@ The `/simpledom/...` routes change the current node immediately when a child box
 
 The `/domtransition/...` routes keep the same parent and child layout, but clicking a child first animates that child box into the parent box position using CSS transitions. After the transition finishes, the clicked child becomes the new parent node.
 
+### Uniq DOM Mode
+
+The `/uniqdom/...` routes use a fundamentally different rendering pattern: there is **one DOM element per tree node**, and the whole tree is mounted once. Clicking a child does **not** swap the parent box for a fresh DOM; instead, that very child's `<div>` is the one that grows to fill its parent's content area, and only then does it reveal its own children inside itself. Going back shrinks it back into its grid cell. See the dedicated section below for the architecture.
+
 ## Documentation métier (boîtes, navigation, animations)
 
-Cette section résume le **travail réalisé sur les boîtes** et les **règles métier** codées dans `DataViewer` (`src/app/app.ts`), le gabarit `data-viewer.html` et les styles `app.css`, pour que la logique de « zoom » et d’animation soit lisible sans parcourir tout le code.
+Cette section résume le **travail réalisé sur les boîtes** et les **règles métier** codées dans `DataViewer` (`src/app/data-viewer.ts`), le gabarit `data-viewer.html` et les styles `data-viewer.css`, pour que la logique de « zoom » et d’animation soit lisible sans parcourir tout le code.
 
 ### Modèle d’affichage : une boîte parent, un niveau d’enfants
 
@@ -94,6 +103,67 @@ La route fixe le **mode** (`simpledom` vs `domtransition`) ; le chargement des d
 
 - **Zoom métier** = mise à jour du **nœud courant** et du **chemin** dans l’arbre (un niveau à la fois, retour arrière et fil d’Ariane).
 - **Animation** = soit **entrée des enfants** (tous modes), soit **en plus** en mode DOM Transition la **translation du clone** + **fondu** + **atténuation du parent**, avec timings fixes ci‑dessus.
+
+## Mode Uniq DOM : un seul DOM, pas de re‑render
+
+Le mode **Uniq DOM** (`/uniqdom/...`) répond à une limite structurelle des deux modes précédents : dès qu’on change de niveau, le DOM du parent est **remplacé** par celui de l’ancien enfant. Toute animation préalable se termine forcément sur un changement de DOM, et c’est ce changement qui « casse » la transition.
+
+### Modèle de rendu : un composant par nœud, tout l’arbre est monté
+
+Le composant `TreeNodeView` (`src/app/tree-node.ts` + `src/app/tree-node.html` + `src/app/tree-node.css`) est **récursif** : il rend une boîte pour son nœud, puis un `*ngFor` qui instancie un `TreeNodeView` pour chacun de ses enfants. La hiérarchie du DOM épouse donc la hiérarchie de la donnée. Tout l’arbre est mounted une fois pour toutes ; aucun nœud n’est jamais détruit ni recréé lors d’un zoom.
+
+À tout instant, chaque nœud est dans un état visuel calculé à partir d’un **chemin courant** partagé (`TreeStateService.currentPath`, signal Angular) :
+
+| État visuel | Quand | Rendu |
+|---|---|---|
+| **`tree-node--root`** | Le nœud racine du JSON. | Boîte ancrée, `position: relative`, occupe la zone du viewer. |
+| **`tree-node--big`** (non root) | Le nœud appartient au chemin courant. | `position: absolute; inset: 0` ; remplit la zone de contenu de son parent, c’est lui qu’on voit. |
+| **`tree-node--small`** | Le nœud n’est pas sur le chemin mais son parent est `big`. | Tuile dans la grille de son parent (`grid-template-columns: repeat(auto-fit, …)`). Cliquable pour zoomer. |
+| **`tree-node--sibling-faded`** | Frère d’un nœud `big` plus profond. | Petite tuile dans la grille du parent commun, opacité 0 (transition CSS), `pointer-events: none`. |
+
+Un nœud `big` n’est pas cliquable (vous êtes déjà dessus) ; seuls ses descendants `small` directement visibles le sont. La grille des enfants est rendue dans un `tree-node__content` qui n’est visible (`opacity: 1`) que lorsque le nœud est `big`, ce qui évite que des grands-enfants invisibles n’interceptent les clics.
+
+### État partagé : signaux Angular dans un service
+
+`TreeStateService` est un `@Injectable()` fourni au niveau de `UniqDomViewer` (`providers: [TreeStateService]`), donc partagé par toute l’arborescence récursive sous lui. Pourquoi pas Jotai ? Les **signaux Angular** offrent exactement la granularité réactive qu’on cherchait, sans dépendance externe, et s’intègrent avec `OnPush` côté change detection. Le service expose :
+
+- `currentPath: WritableSignal<string[]>` — le chemin courant (liste d’`id` du root jusqu’au nœud zoomé).
+- `setPath(path)`, `zoomInto(parentPath, childId)`, `goBack()`, `jumpTo(index)` — toutes passent par `setPath`, qui **snapshot les rectangles** de tous les nœuds enregistrés **avant** de muter le chemin (voir FLIP plus bas).
+- `isOnPath(nodePath)` — utilisé par chaque `TreeNodeView` dans un `computed()` pour dériver `isBig`, `isSiblingFaded`, etc.
+- `registerElement(id, el)` / `unregisterElement(id, el)` — chaque `TreeNodeView` s’enregistre dans `ngOnInit` et se désinscrit dans `ngOnDestroy`. Le service garde une `Map<string, HTMLElement>`.
+
+Chaque composant a un `effect()` qui réagit à un changement de `isBig()` ; c’est là que l’animation FLIP est déclenchée.
+
+### Animation : FLIP via Web Animations API
+
+Le problème principal de l’ancien `domtransition` était la **désynchronisation entre l’animation et le re‑render** : un clone bouge, puis le DOM change, puis on essaie de cacher la cassure avec un fondu. Ici, comme **le DOM ne change pas**, on n’a plus besoin de clone : on anime simplement la transformation visuelle du même élément, en gardant son layout final déjà appliqué. C’est le pattern **FLIP** (*First, Last, Invert, Play*) :
+
+1. **First** : juste avant de modifier `currentPath`, `TreeStateService.snapshotRects()` lit `getBoundingClientRect()` de **tous** les nœuds enregistrés et les stocke dans `prePathRects: Map<string, DOMRect>`.
+2. **Last** : `currentPath` est muté → Angular re‑évalue les `computed()` → `OnPush` réactive le composant concerné → la classe CSS passe de `tree-node--small` à `tree-node--big` (ou l’inverse). Le navigateur applique le nouveau layout en mémoire. L’`effect()` de chaque composant dont `isBig` a changé lit alors le **nouveau** `getBoundingClientRect()`.
+3. **Invert** : on calcule la transformation qui projette le **nouveau** rectangle sur l’**ancien** : `translate(dx, dy) scale(sx, sy)`. C’est l’*image keyframe* de départ de l’animation.
+4. **Play** : `el.animate([{ transform: invert }, { transform: identity }], { duration: 600ms, easing: ‘ease‑out‑expo’ })` ramène la transformation à l’identité. Visuellement, la boîte semble glisser/grandir de son ancien emplacement vers son nouveau, alors que son **layout réel est déjà au final**.
+
+Comme le layout est dans son état final pendant toute la durée de l’animation, ses enfants peuvent être rendus à la bonne place dès la première frame ; il n’y a **plus de moment de bascule** entre « animation » et « DOM réel ».
+
+#### Synchronisation visuelle des sous-éléments
+
+- **Label** : son `position` (centré quand `small`, ancré en haut quand `big`) ainsi que sa `font-size` sont sous transitions CSS de **600 ms** (mêmes durée et easing que le FLIP), donc le label glisse et se redimensionne en cohérence avec la boîte qui grandit/rétrécit.
+- **Grille d’enfants** (`tree-node__content`) : `opacity` 0 → 1 (240 ms ease, **delay 320 ms**) à l’ouverture pour que les petits-enfants n’apparaissent qu’au moment où la boîte est presque arrivée à destination. À la fermeture, fondu sans délai (220 ms) pour disparaître pendant que la boîte rétrécit.
+- **Frères** (`tree-node--sibling-faded`) : `opacity` 0 (220 ms ease) pour se retirer visuellement quand un de leurs frères est `big`.
+
+#### Comportement Back et fil d’Ariane
+
+- **Back** : `goBack()` retire le dernier segment de `currentPath`. Le nœud le plus profond `big` voit `isBig` passer à `false` → son effect déclenche un FLIP **inverse** (de son rectangle plein vers son ancienne tuile dans la grille). Sa grille d’enfants se fade out, ses frères se ré‑afficient.
+- **Breadcrumb** : `jumpTo(index)` tronque le chemin au segment cliqué. Plusieurs nœuds peuvent changer d’état d’un coup ; chacun fait son propre FLIP indépendamment (l’imbrication des transformations composées reste visuellement cohérente pour les usages normaux).
+
+### Constantes (`src/app/tree-node.ts`)
+
+- `UNIQ_FLIP_MS = 600` — durée du FLIP **et** des transitions CSS du label.
+- `UNIQ_FLIP_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'` — easing commun.
+
+### Pourquoi pas Angular Animations ?
+
+Angular Animations marche très bien pour les transitions d’entrée/sortie de bindings, mais ici la **persistance** du même DOM entre `small` et `big` est le cœur du design ; le FLIP via Web Animations API se plie naturellement à ce contrat (on a déjà la référence à l’élément, et on contrôle frame à frame). Les transitions CSS suffisent pour le reste (label, opacités).
 
 ## Data Shape
 

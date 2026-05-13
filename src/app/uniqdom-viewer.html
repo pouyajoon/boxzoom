@@ -1,0 +1,42 @@
+<main class="app-shell">
+  <header class="toolbar">
+    <div>
+      <p class="eyebrow">{{ dataset() }}.json</p>
+      <h1>Uniq DOM View</h1>
+    </div>
+
+    <div class="toolbar-actions">
+      <a class="home-link" [routerLink]="homeRoute()">Datasets</a>
+      <button
+        class="back-button"
+        type="button"
+        [disabled]="currentPath().length <= 1"
+        (click)="onBackClick()"
+      >
+        Back
+      </button>
+    </div>
+  </header>
+
+  <nav class="breadcrumb" aria-label="Current node path" *ngIf="currentPath().length > 0">
+    <button
+      class="crumb"
+      type="button"
+      *ngFor="let segment of currentPath(); let index = index"
+      [disabled]="index === currentPath().length - 1"
+      (click)="onBreadcrumbClick(index)"
+    >
+      {{ segment }}
+    </button>
+  </nav>
+
+  <section class="viewer viewer--uniqdom" *ngIf="root() as r; else loadingState">
+    <app-tree-node [node]="r" [path]="rootPath(r)" [isRoot]="true" />
+  </section>
+</main>
+
+<ng-template #loadingState>
+  <section class="state">
+    {{ errorMessage() || 'Loading ' + dataset() + '.json...' }}
+  </section>
+</ng-template>
