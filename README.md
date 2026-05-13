@@ -35,6 +35,66 @@ The `/simpledom/...` routes change the current node immediately when a child box
 
 The `/domtransition/...` routes keep the same parent and child layout, but clicking a child first animates that child box into the parent box position using CSS transitions. After the transition finishes, the clicked child becomes the new parent node.
 
+## Documentation métier (boîtes, navigation, animations)
+
+Cette section résume le **travail réalisé sur les boîtes** et les **règles métier** codées dans `DataViewer` (`src/app/app.ts`), le gabarit `data-viewer.html` et les styles `app.css`, pour que la logique de « zoom » et d’animation soit lisible sans parcourir tout le code.
+
+### Modèle d’affichage : une boîte parent, un niveau d’enfants
+
+- L’arborescence JSON est un arbre de nœuds `{ id, children[] }`.
+- À tout moment, l’écran ne montre **qu’un seul niveau** : le **nœud courant** dans une grande **boîte parent** (`.root-box`), et **uniquement ses enfants directs** dans des **boîtes enfant** (`.child-box`). Les petits-enfants n’apparaissent qu’après un nouveau « zoom » sur l’enfant correspondant.
+- Le libellé du parent est le `id` du nœud courant (`.box-label`). Chaque enfant affiche son propre `id`.
+
+### Règles de navigation (« zoom » dans l’arbre)
+
+| Action | Règle métier |
+|--------|----------------|
+| **Clic / activation sur une boîte enfant** | Le nœud cliqué devient le **nouveau parent** ; le chemin d’ancêtres (`currentPath`) est étendu avec son `id`. |
+| **Bouton Back** | Remonte **d’un cran** : le dernier segment du chemin est retiré ; on réaffiche l’ancêtre correspondant. **Désactivé** si on est déjà à la racine du chemin (un seul segment). |
+| **Fil d’Ariane (breadcrumbs)** | Chaque segment est un bouton ; cliquer un ancêtre **saute** directement à ce nœud (troncature du chemin). Le segment du **nœud courant** est désactivé (pas de clic inutile). |
+| **Feuille (pas d’enfants)** | Message fixe : *This node has no children.* |
+| **Clavier sur une enfant** | **Entrée** ou **Espace** déclenche la même ouverture qu’un clic (`preventDefault` / `stopPropagation`). |
+
+Le chemin est une liste d’`id` depuis la racine du JSON jusqu’au nœud courant ; la résolution d’un nœud depuis la racine se fait en suivant `children` dans l’ordre du chemin (`findNode`).
+
+### Deux modes de vue (même données, comportement de transition différent)
+
+La route fixe le **mode** (`simpledom` vs `domtransition`) ; le chargement des données et la navigation sont **partagés**, seule la réaction au clic sur un enfant change.
+
+#### Mode Simple DOM (`/simpledom/...`)
+
+- **Règle** : au clic sur un enfant, **changement immédiat** de l’état affiché (`showNode`) — pas d’animation de transition entre parent et enfant.
+- Les enfants peuvent toujours jouer l’animation d’**entrée** Animate.css (voir ci‑dessous) à chaque réaffichage du niveau.
+
+#### Mode DOM Transition (`/domtransition/...`)
+
+- **Règle** : au clic, on **ne** met pas à jour le nœud courant tout de suite ; on enchaîne une **séquence visuelle** puis on aligne le modèle sur le nouvel enfant.
+- **Mesures** : on lit les rectangles écran (`getBoundingClientRect`) de la boîte enfant cliquée et du parent `.root-box`.
+- **Clone fixe** : une copie visuelle (`transition-clone`, `position: fixed`) est positionnée exactement sur l’enfant, avec le même style de bordure que la transition. Le libellé du clone reprend l’`id` de l’enfant.
+- **État « source »** : l’enfant cliqué reçoit la classe `.transition-source` (opacité très basse, animation d’entrée coupée) pour éviter le double rendu pendant que le clone bouge.
+- **Parent atténué** : `.parent-fading` sur `.root-box` (opacité ~0,12) pendant la transition pour mettre l’accent sur le clone.
+- **Animation du clone** : après **deux** `requestAnimationFrame`, les styles du clone passent du rectangle **enfant** au rectangle **parent** (propriétés animées en CSS sur ~**900 ms** : `left`, `top`, `width`, `height`, `border-radius`). Le libellé du clone passe d’une position **centrée verticalement** (comme un libellé d’enfant dans la grille) à une position **haut-gauche** (comme le titre du parent), avec transition des mêmes **900 ms** sur position, `transform` et `font-size` (tailles calculées depuis les styles calculés du DOM réel).
+- **Fin de la translation** : au bout de **900 ms + 20 ms** de garde, on appelle `showNode` pour que le **nouveau parent** soit l’enfant cliqué ; on retire l’atténuation du parent réel et on lance le **fondu du clone** (opacité vers 0 sur ~**1000 ms**, puis nettoyage après **1000 ms + 40 ms**).
+- **Repli** : si le DOM ne fournit pas l’élément enfant ou le parent attendu, on **retombe** sur le comportement Simple DOM (`showNode` direct) pour ne pas bloquer la navigation.
+
+**Constantes** (dans `app.ts`) : `DOM_TRANSITION_DURATION_MS = 900`, `DOM_TRANSITION_HANDOFF_MS = 1000`.
+
+#### Verrou pendant une transition
+
+- Tant qu’un clone de transition est actif (`transitionClone` non nul), **aucun nouveau** `openChild` n’est accepté : évite les transitions concurrentes et les états incohérents.
+
+### Animations des boîtes enfants (Animate.css)
+
+- Chaque enfant a les classes `animate__animated animate__bounceIn` (entrée en « rebond »).
+- **Durée** de l’animation : `--animate-duration: 680ms` sur `.child-box`.
+- **Échelonnement (stagger)** : `animation-delay: calc(var(--child-index, 0) * 70ms)` — le premier enfant part en premier, puis chaque suivant avec **70 ms** de décalage d’index.
+- **Hover / focus** : léger survol (bordure, ombre, `translateY(-2px)`) ; contour visible au clavier (`:focus-visible`).
+
+### Résumé des différences « zoom » vs « animation »
+
+- **Zoom métier** = mise à jour du **nœud courant** et du **chemin** dans l’arbre (un niveau à la fois, retour arrière et fil d’Ariane).
+- **Animation** = soit **entrée des enfants** (tous modes), soit **en plus** en mode DOM Transition la **translation du clone** + **fondu** + **atténuation du parent**, avec timings fixes ci‑dessus.
+
 ## Data Shape
 
 Dataset files are served from `public/` and use this recursive format:
