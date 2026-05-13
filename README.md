@@ -85,49 +85,48 @@ Public URL:
 
 `https://pouyajoon.github.io/boxzoom/`
 
-Build the static GitHub Pages artifact:
+The **`docs/`** folder in this repository is the published static site. It is committed on purpose so you can use **Deploy from a branch** and avoid GitHub Actions `deploy-pages` (no special repo permissions or “first deploy” API quirks).
 
-```bash
-pnpm run build:github-pages
-```
+### Update the live site after code changes
 
-This creates `docs/` from the Angular build output, copies `index.html` to `404.html` for client-side route fallback, and writes `.nojekyll`.
+1. Regenerate **`docs/`**:
+
+   ```bash
+   pnpm run build:github-pages
+   ```
+
+   This runs the Angular `github-pages` build, writes output into **`docs/`**, copies `index.html` to **`404.html`** for SPA route fallback, and adds **`.nojekyll`**.
+
+2. Commit **`docs/`** with your changes and push to **`main`**.
+
+### First-time Pages setup (repository settings)
+
+1. Open [repository Pages settings](https://github.com/pouyajoon/boxzoom/settings/pages).
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch** (not GitHub Actions).
+3. Choose branch **`main`**, folder **`/docs`**, then save.
+
+GitHub builds nothing; it only serves the files already in **`docs/`**.
 
 ### Test locally (same paths as GitHub Pages)
-
-You do not need to push to check routing and assets under `/boxzoom/`:
 
 ```bash
 pnpm run build:preview:github-pages
 ```
 
-Then open the printed URL (for example `http://localhost:4173/boxzoom/`). The preview copies `docs/` into `.preview-github-pages/boxzoom/` and serves the parent folder so the browser base path matches production.
+Then open the printed URL with **`/boxzoom/`** (for example `http://localhost:4173/boxzoom/`).
 
-If `docs/` already exists from a previous build:
+If **`docs/`** is already built:
 
 ```bash
 pnpm run preview:github-pages
 ```
 
-### Test in CI without a production deploy
+### CI
 
-- Open a **pull request**: workflow **Verify Pages build** runs `pnpm run build:github-pages` only (no `deploy-pages` step).
-- **Re-run** **Deploy GitHub Pages** from the Actions tab when you only changed settings (no new commit), using **Run workflow** on `workflow_dispatch`.
+The **Verify Pages build** workflow (`.github/workflows/pages-build-verify.yml`) runs on pull requests and checks that `pnpm run build:github-pages` still succeeds from source. Remember to regenerate and commit **`docs/`** before merging if the app bundle changed.
 
-The deploy job still returns **404** until Pages is enabled in repo settings (see [example deploy failure](https://github.com/pouyajoon/boxzoom/actions/runs/25783080427/job/75730009279)); local preview and the verify workflow avoid that for build checks.
+### Static hosting notes
 
-Deployment is handled by `.github/workflows/pages.yml`.
-
-**First-time setup (required once):**
-
-1. Open [repository Pages settings](https://github.com/pouyajoon/boxzoom/settings/pages).
-2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
-3. Push to `main` or use **Actions → Deploy GitHub Pages → Run workflow**.
-
-Until Pages is enabled this way, the deploy job cannot create a site. Older failures such as [Actions run #25765314302](https://github.com/pouyajoon/boxzoom/actions/runs/25765314302) showed `configure-pages` / “Get Pages site failed” because no Pages site existed yet — the workflow no longer runs `configure-pages`, but **deploy still requires** Pages source set to GitHub Actions in settings.
-
-Important static hosting details:
-
-- `angular.json` has a `github-pages` build configuration with `baseHref: "/boxzoom/"`.
-- Dataset JSON files are loaded relative to `document.baseURI`, so they work both locally and under `/boxzoom/` on GitHub Pages.
-- `404.html` lets direct links like `/boxzoom/simpledom/data3` and `/boxzoom/domtransition/data3` load the Angular app.
+- `angular.json` has a `github-pages` configuration with **`baseHref: "/boxzoom/"`**.
+- Dataset JSON is loaded relative to **`document.baseURI`**, so it works under **`/boxzoom/`**.
+- **`404.html`** matches **`index.html`** so deep links load the Angular app.

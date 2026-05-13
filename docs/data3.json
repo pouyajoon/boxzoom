@@ -1,0 +1,573 @@
+{
+  "id": "France",
+  "children": [
+    {
+      "id": "Ile-de-France",
+      "children": [
+        {
+          "id": "Paris",
+          "children": [
+            {
+              "id": "Paris",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Hauts-de-Seine",
+          "children": [
+            {
+              "id": "Boulogne-Billancourt",
+              "children": []
+            },
+            {
+              "id": "Nanterre",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Seine-Saint-Denis",
+          "children": [
+            {
+              "id": "Saint-Denis",
+              "children": []
+            },
+            {
+              "id": "Montreuil",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Val-de-Marne",
+          "children": [
+            {
+              "id": "Creteil",
+              "children": []
+            },
+            {
+              "id": "Vitry-sur-Seine",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Auvergne-Rhone-Alpes",
+      "children": [
+        {
+          "id": "Rhone",
+          "children": [
+            {
+              "id": "Lyon",
+              "children": []
+            },
+            {
+              "id": "Villeurbanne",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Isere",
+          "children": [
+            {
+              "id": "Grenoble",
+              "children": []
+            },
+            {
+              "id": "Vienne",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Haute-Savoie",
+          "children": [
+            {
+              "id": "Annecy",
+              "children": []
+            },
+            {
+              "id": "Annemasse",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Provence-Alpes-Cote d'Azur",
+      "children": [
+        {
+          "id": "Bouches-du-Rhone",
+          "children": [
+            {
+              "id": "Marseille",
+              "children": []
+            },
+            {
+              "id": "Aix-en-Provence",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Alpes-Maritimes",
+          "children": [
+            {
+              "id": "Nice",
+              "children": []
+            },
+            {
+              "id": "Cannes",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Var",
+          "children": [
+            {
+              "id": "Toulon",
+              "children": []
+            },
+            {
+              "id": "Frejus",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Occitanie",
+      "children": [
+        {
+          "id": "Haute-Garonne",
+          "children": [
+            {
+              "id": "Toulouse",
+              "children": []
+            },
+            {
+              "id": "Colomiers",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Herault",
+          "children": [
+            {
+              "id": "Montpellier",
+              "children": []
+            },
+            {
+              "id": "Beziers",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Gard",
+          "children": [
+            {
+              "id": "Nimes",
+              "children": []
+            },
+            {
+              "id": "Ales",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Nouvelle-Aquitaine",
+      "children": [
+        {
+          "id": "Gironde",
+          "children": [
+            {
+              "id": "Bordeaux",
+              "children": []
+            },
+            {
+              "id": "Merignac",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Pyrenees-Atlantiques",
+          "children": [
+            {
+              "id": "Pau",
+              "children": []
+            },
+            {
+              "id": "Bayonne",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Vienne",
+          "children": [
+            {
+              "id": "Poitiers",
+              "children": []
+            },
+            {
+              "id": "Chatellerault",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Hauts-de-France",
+      "children": [
+        {
+          "id": "Nord",
+          "children": [
+            {
+              "id": "Lille",
+              "children": []
+            },
+            {
+              "id": "Roubaix",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Pas-de-Calais",
+          "children": [
+            {
+              "id": "Calais",
+              "children": []
+            },
+            {
+              "id": "Arras",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Somme",
+          "children": [
+            {
+              "id": "Amiens",
+              "children": []
+            },
+            {
+              "id": "Abbeville",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Grand Est",
+      "children": [
+        {
+          "id": "Bas-Rhin",
+          "children": [
+            {
+              "id": "Strasbourg",
+              "children": []
+            },
+            {
+              "id": "Haguenau",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Moselle",
+          "children": [
+            {
+              "id": "Metz",
+              "children": []
+            },
+            {
+              "id": "Thionville",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Marne",
+          "children": [
+            {
+              "id": "Reims",
+              "children": []
+            },
+            {
+              "id": "Chalons-en-Champagne",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Pays de la Loire",
+      "children": [
+        {
+          "id": "Loire-Atlantique",
+          "children": [
+            {
+              "id": "Nantes",
+              "children": []
+            },
+            {
+              "id": "Saint-Nazaire",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Maine-et-Loire",
+          "children": [
+            {
+              "id": "Angers",
+              "children": []
+            },
+            {
+              "id": "Cholet",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Sarthe",
+          "children": [
+            {
+              "id": "Le Mans",
+              "children": []
+            },
+            {
+              "id": "La Fleche",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Bretagne",
+      "children": [
+        {
+          "id": "Ille-et-Vilaine",
+          "children": [
+            {
+              "id": "Rennes",
+              "children": []
+            },
+            {
+              "id": "Saint-Malo",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Finistere",
+          "children": [
+            {
+              "id": "Brest",
+              "children": []
+            },
+            {
+              "id": "Quimper",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Morbihan",
+          "children": [
+            {
+              "id": "Lorient",
+              "children": []
+            },
+            {
+              "id": "Vannes",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Normandie",
+      "children": [
+        {
+          "id": "Seine-Maritime",
+          "children": [
+            {
+              "id": "Le Havre",
+              "children": []
+            },
+            {
+              "id": "Rouen",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Calvados",
+          "children": [
+            {
+              "id": "Caen",
+              "children": []
+            },
+            {
+              "id": "Lisieux",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Manche",
+          "children": [
+            {
+              "id": "Cherbourg-en-Cotentin",
+              "children": []
+            },
+            {
+              "id": "Saint-Lo",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Centre-Val de Loire",
+      "children": [
+        {
+          "id": "Loiret",
+          "children": [
+            {
+              "id": "Orleans",
+              "children": []
+            },
+            {
+              "id": "Montargis",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Indre-et-Loire",
+          "children": [
+            {
+              "id": "Tours",
+              "children": []
+            },
+            {
+              "id": "Joue-les-Tours",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Cher",
+          "children": [
+            {
+              "id": "Bourges",
+              "children": []
+            },
+            {
+              "id": "Vierzon",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Bourgogne-Franche-Comte",
+      "children": [
+        {
+          "id": "Cote-d'Or",
+          "children": [
+            {
+              "id": "Dijon",
+              "children": []
+            },
+            {
+              "id": "Beaune",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Doubs",
+          "children": [
+            {
+              "id": "Besancon",
+              "children": []
+            },
+            {
+              "id": "Montbeliard",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Saone-et-Loire",
+          "children": [
+            {
+              "id": "Chalon-sur-Saone",
+              "children": []
+            },
+            {
+              "id": "Macon",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Corse",
+      "children": [
+        {
+          "id": "Corse-du-Sud",
+          "children": [
+            {
+              "id": "Ajaccio",
+              "children": []
+            },
+            {
+              "id": "Porto-Vecchio",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "Haute-Corse",
+          "children": [
+            {
+              "id": "Bastia",
+              "children": []
+            },
+            {
+              "id": "Corte",
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
