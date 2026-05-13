@@ -93,7 +93,15 @@ pnpm run build:github-pages
 
 This creates `docs/` from the Angular build output, copies `index.html` to `404.html` for client-side route fallback, and writes `.nojekyll`.
 
-Deployment is handled by `.github/workflows/pages.yml`. In GitHub repository settings, set Pages to deploy from **GitHub Actions**.
+Deployment is handled by `.github/workflows/pages.yml`.
+
+**First-time setup (required once):**
+
+1. Open [repository Pages settings](https://github.com/pouyajoon/boxzoom/settings/pages).
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Push to `main` or use **Actions → Deploy GitHub Pages → Run workflow**.
+
+Until Pages is enabled this way, the deploy job cannot create a site. Older failures such as [Actions run #25765314302](https://github.com/pouyajoon/boxzoom/actions/runs/25765314302) showed `configure-pages` / “Get Pages site failed” because no Pages site existed yet — the workflow no longer runs `configure-pages`, but **deploy still requires** Pages source set to GitHub Actions in settings.
 
 Important static hosting details:
 
