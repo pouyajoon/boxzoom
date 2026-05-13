@@ -57,18 +57,23 @@ type RenderNode = {
 type IndexMode = 'root' | 'simpledom' | 'domtransition';
 type ViewerMode = 'simpledom' | 'domtransition';
 
+/** Resolved preview image + logical size (aligns child tile SVG with parent image-map SVG). */
+type ImagePreviewSlice = {
+  href: string;
+  viewWidth: number;
+  viewHeight: number;
+};
+
 type TransitionClone = {
   id: string;
+  preview: ImagePreviewSlice | null;
   style: Record<string, string>;
   labelStyle: Record<string, string>;
 };
 
 const DOM_TRANSITION_DURATION_MS = 900;
 const DOM_TRANSITION_HANDOFF_MS = 1000;
-
-function cssEscapeUrl(url: string): string {
-  return url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
+const DOM_TRANSITION_SIBLING_FADE_MS = 200;
 
 /** Centroid in viewBox units (shoelace; falls back to vertex average if area is tiny). */
 function polygonCentroid(points: ReadonlyArray<readonly [number, number]>): readonly [number, number] {
@@ -171,6 +176,7 @@ export class DataIndex implements OnInit {
 export class DataViewer implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private transitionTimeout: number | null = null;
+  private siblingFadeTimeout: number | null = null;
 
   readonly dataset = signal('data2');
   readonly mode = signal<ViewerMode>('simpledom');
@@ -181,6 +187,8 @@ export class DataViewer implements OnInit {
   readonly errorMessage = signal('');
   readonly transitionClone = signal<TransitionClone | null>(null);
   readonly transitioningChildId = signal<string | null>(null);
+  /** During DOM transition: fade siblings then drop them from the template. */
+  readonly transitionSiblingPhase = signal<'fading' | 'gone' | null>(null);
   readonly parentFading = signal(false);
 
   ngOnInit(): void {
@@ -281,17 +289,24 @@ export class DataViewer implements OnInit {
     return zone.child.id;
   }
 
-  childBoxHasBackground(child: TreeNode): boolean {
-    return this.resolveMediaUrl(child.backgroundImageUrl) !== null;
+  childHasImagePreview(child: TreeNode): boolean {
+    return this.imagePreviewForNode(child) !== null;
   }
 
-  childBoxStyle(child: TreeNode): Record<string, string> {
-    const url = this.resolveMediaUrl(child.backgroundImageUrl);
-    if (!url) {
-      return {};
+  /** Same SVG framing as the full image-map (viewBox + meet) for tiles and the transition clone. */
+  imagePreviewForNode(node: TreeNode): ImagePreviewSlice | null {
+    const href = this.resolveMediaUrl(node.backgroundImageUrl);
+    if (!href) {
+      return null;
     }
 
-    return { 'background-image': `url("${cssEscapeUrl(url)}")` };
+    const map = node.imageMap;
+    const viewWidth =
+      map && typeof map.width === 'number' && map.width > 0 ? map.width : 16;
+    const viewHeight =
+      map && typeof map.height === 'number' && map.height > 0 ? map.height : 9;
+
+    return { href, viewWidth, viewHeight };
   }
 
   imageMapLabelFont(viewWidth: number): number {
@@ -308,6 +323,50 @@ export class DataViewer implements OnInit {
 
   isTransitioningChild(child: TreeNode): boolean {
     return this.transitioningChildId() === child.id;
+  }
+
+  visibleChildren(tree: RenderNode): TreeNode[] {
+    if (
+      this.mode() !== 'domtransition' ||
+      this.transitionSiblingPhase() !== 'gone' ||
+      !this.transitioningChildId()
+    ) {
+      return tree.children;
+    }
+
+    const id = this.transitioningChildId()!;
+    return tree.children.filter((c) => c.id === id);
+  }
+
+  siblingFadeActive(child: TreeNode): boolean {
+    return (
+      this.mode() === 'domtransition' &&
+      this.transitionSiblingPhase() === 'fading' &&
+      !!this.transitioningChildId() &&
+      this.transitioningChildId() !== child.id
+    );
+  }
+
+  visibleZones(im: RenderImageMap): RenderImageMapZone[] {
+    if (
+      this.mode() !== 'domtransition' ||
+      this.transitionSiblingPhase() !== 'gone' ||
+      !this.transitioningChildId()
+    ) {
+      return im.zones;
+    }
+
+    const id = this.transitioningChildId()!;
+    return im.zones.filter((z) => z.child.id === id);
+  }
+
+  zoneSiblingFadeActive(zone: RenderImageMapZone): boolean {
+    return (
+      this.mode() === 'domtransition' &&
+      this.transitionSiblingPhase() === 'fading' &&
+      !!this.transitioningChildId() &&
+      this.transitioningChildId() !== zone.child.id
+    );
   }
 
   private openChild(child: TreeNode, eventTarget: EventTarget | null): void {
@@ -329,6 +388,7 @@ export class DataViewer implements OnInit {
     const childElement = eventTarget instanceof HTMLElement ? eventTarget : null;
     const parentElement = childElement?.closest<HTMLElement>('.root-box');
     if (!childElement || !parentElement) {
+      this.transitionSiblingPhase.set(null);
       this.showNode(child, nextPath);
       return;
     }
@@ -336,14 +396,25 @@ export class DataViewer implements OnInit {
     const start = childElement.getBoundingClientRect();
     const end = parentElement.getBoundingClientRect();
     const baseStyle = this.cloneStyle(start);
+    const preview = this.imagePreviewForNode(child);
     const childFontSize = window.getComputedStyle(childElement).fontSize;
     const parentFontSize = window.getComputedStyle(parentElement).fontSize;
 
     this.transitioningChildId.set(child.id);
     this.parentFading.set(true);
+    this.transitionSiblingPhase.set('fading');
+    if (this.siblingFadeTimeout !== null) {
+      window.clearTimeout(this.siblingFadeTimeout);
+    }
+    this.siblingFadeTimeout = window.setTimeout(() => {
+      this.transitionSiblingPhase.set('gone');
+      this.siblingFadeTimeout = null;
+    }, DOM_TRANSITION_SIBLING_FADE_MS);
+
     this.transitionClone.set({
       id: child.id,
-      style: baseStyle,
+      preview,
+      style: { ...baseStyle },
       labelStyle: {
         left: '14px',
         right: '14px',
@@ -357,15 +428,10 @@ export class DataViewer implements OnInit {
       window.requestAnimationFrame(() => {
         this.transitionClone.set({
           id: child.id,
+          preview,
           style: {
             ...this.cloneStyle(end),
-            transition: this.transitionCss([
-              'left',
-              'top',
-              'width',
-              'height',
-              'border-radius',
-            ]),
+            transition: this.transitionCss(['left', 'top', 'width', 'height', 'border-radius']),
           },
           labelStyle: {
             left: '24px',
@@ -386,6 +452,7 @@ export class DataViewer implements OnInit {
     });
 
     this.transitionTimeout = window.setTimeout(() => {
+      this.transitionSiblingPhase.set(null);
       this.showNode(child, nextPath);
       this.parentFading.set(false);
       this.fadeOutTransitionClone();
@@ -402,15 +469,16 @@ export class DataViewer implements OnInit {
     window.requestAnimationFrame(() => {
       this.transitionClone.set({
         id: clone.id,
+        preview: clone.preview,
         style: {
           ...clone.style,
           opacity: '0',
-          transition: `${clone.style['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease`,
+          transition: `${clone.style['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease-in-out`,
         },
         labelStyle: {
           ...clone.labelStyle,
           opacity: '0',
-          transition: `${clone.labelStyle['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease`,
+          transition: `${clone.labelStyle['transition'] ?? ''}, opacity ${DOM_TRANSITION_HANDOFF_MS}ms ease-in-out`,
         },
       });
     });
@@ -421,7 +489,9 @@ export class DataViewer implements OnInit {
   }
 
   private transitionCss(properties: string[]): string {
-    return properties.map((property) => `${property} ${DOM_TRANSITION_DURATION_MS}ms ease`).join(', ');
+    return properties
+      .map((property) => `${property} ${DOM_TRANSITION_DURATION_MS}ms ease-in-out`)
+      .join(', ');
   }
 
   private cloneStyle(rect: DOMRect): Record<string, string> {
@@ -440,8 +510,13 @@ export class DataViewer implements OnInit {
       window.clearTimeout(this.transitionTimeout);
       this.transitionTimeout = null;
     }
+    if (this.siblingFadeTimeout !== null) {
+      window.clearTimeout(this.siblingFadeTimeout);
+      this.siblingFadeTimeout = null;
+    }
     this.transitionClone.set(null);
     this.transitioningChildId.set(null);
+    this.transitionSiblingPhase.set(null);
     this.parentFading.set(false);
   }
 

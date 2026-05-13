@@ -39,7 +39,7 @@
           <svg
             class="image-map-svg"
             [attr.viewBox]="'0 0 ' + im.viewWidth + ' ' + im.viewHeight"
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="xMidYMax meet"
             role="group"
             [attr.aria-label]="'Interactive map for ' + tree.id"
           >
@@ -50,12 +50,13 @@
               y="0"
               [attr.width]="im.viewWidth"
               [attr.height]="im.viewHeight"
-              preserveAspectRatio="xMidYMid meet"
+              preserveAspectRatio="xMidYMax meet"
               tabindex="-1"
             />
             <g
-              *ngFor="let zone of im.zones; let zIndex = index; trackBy: trackByZoneChildId"
+              *ngFor="let zone of visibleZones(im); let zIndex = index; trackBy: trackByZoneChildId"
               class="image-map-zone-group animate__animated animate__bounceIn"
+              [class.transition-sibling-fade]="zoneSiblingFadeActive(zone)"
               [style.--child-index]="zIndex"
             >
               <polygon
@@ -88,14 +89,32 @@
             <button
               class="child-box animate__animated animate__bounceIn"
               type="button"
-              *ngFor="let child of tree.children; let index = index; trackBy: trackById"
+              *ngFor="let child of visibleChildren(tree); let index = index; trackBy: trackById"
               [style.--child-index]="index"
-              [class.child-box-has-bg]="childBoxHasBackground(child)"
-              [ngStyle]="childBoxStyle(child)"
+              [class.child-box-has-preview]="childHasImagePreview(child)"
+              [class.transition-sibling-fade]="siblingFadeActive(child)"
               [class.transition-source]="isTransitioningChild(child)"
               (click)="onNodeClick($event, child)"
               (keydown)="onNodeKeydown($event, child)"
             >
+              <svg
+                *ngIf="imagePreviewForNode(child) as pv"
+                class="child-preview-svg"
+                [attr.viewBox]="'0 0 ' + pv.viewWidth + ' ' + pv.viewHeight"
+                preserveAspectRatio="xMidYMax meet"
+                aria-hidden="true"
+              >
+                <image
+                  class="child-preview-photo"
+                  [attr.href]="pv.href"
+                  x="0"
+                  y="0"
+                  [attr.width]="pv.viewWidth"
+                  [attr.height]="pv.viewHeight"
+                  preserveAspectRatio="xMidYMax meet"
+                  tabindex="-1"
+                />
+              </svg>
               <span class="child-box-label">{{ child.id }}</span>
             </button>
           </div>
@@ -107,8 +126,27 @@
   <div
     class="transition-clone"
     *ngIf="transitionClone() as clone"
+    [class.transition-clone-has-preview]="clone.preview"
     [ngStyle]="clone.style"
   >
+    <svg
+      *ngIf="clone.preview as p"
+      class="transition-clone-preview-svg"
+      [attr.viewBox]="'0 0 ' + p.viewWidth + ' ' + p.viewHeight"
+      preserveAspectRatio="xMidYMax meet"
+      aria-hidden="true"
+    >
+      <image
+        class="transition-clone-preview-photo"
+        [attr.href]="p.href"
+        x="0"
+        y="0"
+        [attr.width]="p.viewWidth"
+        [attr.height]="p.viewHeight"
+        preserveAspectRatio="xMidYMax meet"
+        tabindex="-1"
+      />
+    </svg>
     <span class="transition-clone-label" [ngStyle]="clone.labelStyle">
       {{ clone.id }}
     </span>
