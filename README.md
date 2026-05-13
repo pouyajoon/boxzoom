@@ -93,6 +93,29 @@ pnpm run build:github-pages
 
 This creates `docs/` from the Angular build output, copies `index.html` to `404.html` for client-side route fallback, and writes `.nojekyll`.
 
+### Test locally (same paths as GitHub Pages)
+
+You do not need to push to check routing and assets under `/boxzoom/`:
+
+```bash
+pnpm run build:preview:github-pages
+```
+
+Then open the printed URL (for example `http://localhost:4173/boxzoom/`). The preview copies `docs/` into `.preview-github-pages/boxzoom/` and serves the parent folder so the browser base path matches production.
+
+If `docs/` already exists from a previous build:
+
+```bash
+pnpm run preview:github-pages
+```
+
+### Test in CI without a production deploy
+
+- Open a **pull request**: workflow **Verify Pages build** runs `pnpm run build:github-pages` only (no `deploy-pages` step).
+- **Re-run** **Deploy GitHub Pages** from the Actions tab when you only changed settings (no new commit), using **Run workflow** on `workflow_dispatch`.
+
+The deploy job still returns **404** until Pages is enabled in repo settings (see [example deploy failure](https://github.com/pouyajoon/boxzoom/actions/runs/25783080427/job/75730009279)); local preview and the verify workflow avoid that for build checks.
+
 Deployment is handled by `.github/workflows/pages.yml`.
 
 **First-time setup (required once):**

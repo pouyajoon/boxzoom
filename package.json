@@ -6,6 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "build:github-pages": "ng build --configuration github-pages && node scripts/prepare-github-pages.mjs",
+    "preview:github-pages": "node scripts/preview-github-pages.mjs",
+    "build:preview:github-pages": "pnpm run build:github-pages && pnpm run preview:github-pages",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

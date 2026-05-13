@@ -3,6 +3,7 @@
 # Compiled output
 /dist
 /docs
+.preview-github-pages
 /tmp
 /out-tsc
 /bazel-out
