@@ -120,6 +120,24 @@ h1 {
   opacity: 0.12;
 }
 
+/** Carte image : même cadre que la boîte parente (pleine largeur, bas arrondi, rien qui dépasse). */
+.root-box--image-map {
+  overflow: hidden;
+}
+
+.root-box--image-map .image-map-panel {
+  margin-top: 18px;
+  margin-inline: -24px;
+  margin-bottom: -24px;
+  width: calc(100% + 48px);
+}
+
+.root-box--image-map .image-map-svg {
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
 .image-map-panel {
   margin-top: 22px;
   width: 100%;
