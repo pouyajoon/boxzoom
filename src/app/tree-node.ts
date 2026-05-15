@@ -15,10 +15,95 @@ import {
 } from '@angular/core';
 import { TreeStateService } from './tree-state.service';
 
+/** Normalized [0, 1] coordinates relative to the imageMap's logical width/height. */
+export type UniqImageMapPolygonPoint = readonly [number, number];
+
+export type UniqImageMapZoneJson = {
+  childId: string;
+  label?: string;
+  description?: string;
+  polygon: UniqImageMapPolygonPoint[];
+};
+
+export type UniqImageMapJson = {
+  imageUrl: string;
+  /** Logical coordinate system for polygons (defaults to 100x100). */
+  width?: number;
+  height?: number;
+  zones: UniqImageMapZoneJson[];
+};
+
 export type UniqTreeNode = {
   id: string;
   children: UniqTreeNode[];
+  /** When present, the node renders an interactive image with clickable polygons
+   * instead of the standard grid of small children tiles. Each zone routes to
+   * a child whose `id` matches the zone's `childId`. */
+  imageMap?: UniqImageMapJson;
+  /** Optional background image shown on the small tile (preview before zooming). */
+  backgroundImageUrl?: string;
 };
+
+/** Resolved (template-ready) image map for a node — coords pre-multiplied into
+ * viewBox units, polygons matched to real children, centroids precomputed. */
+type RenderImageMapZone = {
+  child: UniqTreeNode;
+  label: string;
+  description?: string;
+  pointsAttr: string;
+  tooltip: string;
+  labelCenterX: number;
+  labelCenterY: number;
+};
+
+type RenderImageMap = {
+  imageUrl: string;
+  viewWidth: number;
+  viewHeight: number;
+  zones: RenderImageMapZone[];
+};
+
+/** Same framing as DataViewer — small tile thumbnail before zoom when `backgroundImageUrl` exists. */
+type TilePhotoPreview = {
+  href: string;
+  viewWidth: number;
+  viewHeight: number;
+};
+
+/** Polygon centroid in viewBox units (shoelace; falls back to vertex average
+ * if the polygon's signed area is near zero). Same algorithm as the one in
+ * `data-viewer.ts` — kept local to avoid forcing a shared util for one helper. */
+function polygonCentroidUniq(
+  points: ReadonlyArray<readonly [number, number]>,
+): readonly [number, number] {
+  const n = points.length;
+  if (n === 0) {
+    return [0, 0];
+  }
+  let twiceArea = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < n; i += 1) {
+    const j = (i + 1) % n;
+    const [xi, yi] = points[i];
+    const [xj, yj] = points[j];
+    const cross = xi * yj - xj * yi;
+    twiceArea += cross;
+    cx += (xi + xj) * cross;
+    cy += (yi + yj) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-6) {
+    let sx = 0;
+    let sy = 0;
+    for (const [x, y] of points) {
+      sx += x;
+      sy += y;
+    }
+    return [sx / n, sy / n];
+  }
+  const area = twiceArea / 2;
+  return [cx / (6 * area), cy / (6 * area)];
+}
 
 /**
  * Animation length used both by the FLIP transform and by the CSS transitions
@@ -160,6 +245,35 @@ export class TreeNodeView implements OnInit, OnDestroy {
     return true;
   });
 
+  /** Resolved image map for this node, or null when the JSON has none / when
+   * the resolved zones don't link to any real child. The `node` input is
+   * fixed for the lifetime of the component (recursion creates one view per
+   * node), so we just compute lazily on first read. */
+  private _resolvedImageMap: RenderImageMap | null | undefined;
+  resolvedImageMap(): RenderImageMap | null {
+    if (this._resolvedImageMap === undefined) {
+      this._resolvedImageMap = this.buildImageMap(this.node);
+    }
+    return this._resolvedImageMap;
+  }
+
+  /** Thumbnail for small tiles that have `backgroundImageUrl` but no usable image map. */
+  photoOnlySmallPreview(): TilePhotoPreview | null {
+    if (this.isBig() || this.resolvedImageMap()) {
+      return null;
+    }
+    const href = this.resolveMediaUrl(this.node.backgroundImageUrl);
+    if (!href) {
+      return null;
+    }
+    const map = this.node.imageMap;
+    const viewWidth =
+      map && typeof map.width === 'number' && map.width > 0 ? map.width : 16;
+    const viewHeight =
+      map && typeof map.height === 'number' && map.height > 0 ? map.height : 9;
+    return { href, viewWidth, viewHeight };
+  }
+
   constructor() {
     effect(() => {
       const isBig = this.isBig();
@@ -250,6 +364,137 @@ export class TreeNodeView implements OnInit, OnDestroy {
 
   trackById(_index: number, child: UniqTreeNode): string {
     return child.id;
+  }
+
+  trackByZoneChildId(_index: number, zone: RenderImageMapZone): string {
+    return zone.child.id;
+  }
+
+  /** Font size for SVG zone labels — scaled with the imageMap's logical width
+   * so labels look consistent across maps of different resolutions. */
+  imageMapLabelFont(viewWidth: number): number {
+    return Math.max(12, Math.round(viewWidth * 0.034));
+  }
+
+  /**
+   * Click on a polygon zone — zoom into the matching child.
+   *
+   * The polygon's screen rect (captured here at click time) is passed to the
+   * state service as the FLIP "start rect", so the child grows visually from
+   * where the polygon is rather than from wherever its hidden small tile sits
+   * in the DOM. Without this override the child would appear to grow from a
+   * collapsed point and the polygon-to-box continuity would be lost.
+   */
+  onImageZoneClick(event: Event, child: UniqTreeNode): void {
+    event.stopPropagation();
+    if (!this.isLeafBig()) {
+      return;
+    }
+    const target = event.currentTarget as SVGGraphicsElement | null;
+    const rect = target?.getBoundingClientRect();
+    this.state.zoomInto(this.path, child.id, rect);
+  }
+
+  onImageZoneKeydown(event: KeyboardEvent, child: UniqTreeNode): void {
+    if (!this.isLeafBig()) {
+      return;
+    }
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const target = event.currentTarget as SVGGraphicsElement | null;
+    const rect = target?.getBoundingClientRect();
+    this.state.zoomInto(this.path, child.id, rect);
+  }
+
+  /**
+   * Resolves a media url:
+   *   - absolute http(s) / data: → returned as-is
+   *   - relative → resolved against `document.baseURI` (so it works under the
+   *     Vite dev server, in production builds, and behind a base href).
+   */
+  private resolveMediaUrl(src: string | undefined | null): string | null {
+    if (!src?.trim()) {
+      return null;
+    }
+    const value = src.trim();
+    if (/^https?:\/\//i.test(value) || value.startsWith('data:')) {
+      return value;
+    }
+    try {
+      return new URL(value, document.baseURI).href;
+    } catch {
+      return value;
+    }
+  }
+
+  /**
+   * Turns raw `imageMap` JSON into the render-ready shape used by the
+   * template: viewBox dimensions, points in viewBox units, label centroid,
+   * link back to the actual child node. Returns null when the data is empty
+   * or the polygons don't link to any real child.
+   */
+  private buildImageMap(node: UniqTreeNode): RenderImageMap | null {
+    const raw = node.imageMap;
+    if (!raw?.imageUrl || !Array.isArray(raw.zones) || raw.zones.length === 0) {
+      return null;
+    }
+
+    const viewWidth = raw.width ?? 100;
+    const viewHeight = raw.height ?? 100;
+    const mapImageUrl = this.resolveMediaUrl(raw.imageUrl) ?? raw.imageUrl;
+    const zones: RenderImageMapZone[] = [];
+
+    for (const zone of raw.zones) {
+      const child = node.children.find((c) => c.id === zone.childId);
+      if (!child || !zone.polygon || zone.polygon.length < 3) {
+        continue;
+      }
+
+      const parts: string[] = [];
+      const absPoints: [number, number][] = [];
+      let valid = true;
+      for (const pair of zone.polygon) {
+        if (!Array.isArray(pair) || pair.length < 2) {
+          valid = false;
+          break;
+        }
+        const nx = Number(pair[0]);
+        const ny = Number(pair[1]);
+        if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+          valid = false;
+          break;
+        }
+        const ax = nx * viewWidth;
+        const ay = ny * viewHeight;
+        absPoints.push([ax, ay]);
+        parts.push(`${ax},${ay}`);
+      }
+      if (!valid || parts.length < 3) {
+        continue;
+      }
+
+      const label = zone.label?.trim() || child.id;
+      const description = zone.description?.trim();
+      const tooltip = description ? `${child.id} — ${description}` : child.id;
+      const [labelCenterX, labelCenterY] = polygonCentroidUniq(absPoints);
+
+      zones.push({
+        child,
+        label,
+        description: description || undefined,
+        pointsAttr: parts.join(' '),
+        tooltip,
+        labelCenterX,
+        labelCenterY,
+      });
+    }
+
+    return zones.length > 0
+      ? { imageUrl: mapImageUrl, viewWidth, viewHeight, zones }
+      : null;
   }
 
   /**

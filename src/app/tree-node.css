@@ -8,6 +8,12 @@
  * the rules below describe the start/end CSS layouts the FLIP animates
  * between, plus the synchronized label slide, sibling fade and child fade.
  *
+ *   - Nodes with `imageMap` keep a **stable DOM**: `.tree-node__label` → the
+ *     same `.tree-node__image-map` `<svg>` → `.tree-node__content`. The SVG
+ *     stays mounted from small tile through leaf-big; only CSS (thumbnail
+ *     vs full floor, `--leaf` / `--ancestor`) changes — no swap between a
+ *     preview SVG and a second map SVG, which reads smoother during FLIP zoom.
+ *
  * Layout strategy for "the child takes the parent's place":
  *   - Each `.tree-node` is a flex column (label absolute on top, content
  *     filling the remaining height).
@@ -241,6 +247,168 @@
 .tree-node--big > .tree-node__empty {
   opacity: 1;
   transition: opacity var(--reveal-duration) var(--soft-ease) var(--reveal-delay);
+}
+
+/* Small tile with photo only (no image map): vignette under the label. */
+.tree-node--small.tree-node--has-tile-photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.72) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tree-node__tile-preview-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tree-node__tile-preview-photo {
+  pointer-events: none;
+}
+
+.tree-node--small.tree-node--has-tile-photo .tree-node__label {
+  z-index: 1;
+  text-shadow: 0 2px 10px rgba(2, 6, 23, 0.85);
+}
+
+/* ---- Image map (same <svg> from small tile → leaf-big; CSS switches layout) -----
+ *
+ * DOM order is always: `.tree-node__label` → `.tree-node__image-map` → `.tree-node__content`
+ * so the same SVG instance stays mounted when Factory 1 goes from child tile
+ * to zoomed parent (only classes / preserveAspectRatio change — better FLIP
+ * continuity than swapping a preview SVG for a second map SVG).
+ *
+ *   - `--leaf`: interactive floor under the title bar; polygons focusable.
+ *   - not `--leaf` on a small tile: full-bleed thumbnail, pointer-events none.
+ *   - `--ancestor`: big node on path but not leaf — map hidden (child covers).
+ * --------------------------------------------------------------------------- */
+
+/* Same SVG: non-leaf modes (small thumbnail or hidden ancestor). */
+.tree-node--has-image-map > .tree-node__image-map:not(.tree-node__image-map--leaf) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  border-radius: inherit;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
+  pointer-events: none;
+  --animate-duration: var(--reveal-duration);
+  animation-delay: var(--reveal-delay);
+}
+
+.tree-node--small.tree-node--has-image-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.72) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tree-node--small.tree-node--has-image-map .tree-node__label {
+  z-index: 2;
+  text-shadow: 0 2px 10px rgba(2, 6, 23, 0.85);
+}
+
+/* Hide zone chrome on thumbnail / ancestor — only the photo reads as the tile. */
+.tree-node__image-map:not(.tree-node__image-map--leaf) .tree-node__image-map-zone-group {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tree-node__image-map.tree-node__image-map--ancestor {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  animation: none !important;
+}
+
+/* Leaf-big: full interactive map below the title bar. */
+.tree-node--leaf-big.tree-node--has-image-map > .tree-node__image-map.tree-node__image-map--leaf {
+  position: absolute;
+  top: 96px;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1;
+  display: block;
+  width: auto;
+  height: auto;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
+  pointer-events: auto;
+  --animate-duration: var(--reveal-duration);
+  animation-delay: var(--reveal-delay);
+}
+
+.tree-node--leaf-big.tree-node--has-image-map > .tree-node__image-map.tree-node__image-map--leaf .tree-node__image-map-zone-group {
+  opacity: 1;
+  pointer-events: auto;
+  --animate-duration: 680ms;
+  animation-delay: calc(var(--reveal-delay) + var(--child-index, 0) * 70ms);
+}
+
+.tree-node__image-map-photo {
+  pointer-events: none;
+}
+
+.tree-node__image-map-zone {
+  fill: rgba(96, 165, 250, 0.2);
+  stroke: rgba(147, 197, 253, 0.88);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition:
+    fill var(--hover-duration) var(--soft-ease),
+    stroke var(--hover-duration) var(--soft-ease),
+    filter var(--hover-duration) var(--soft-ease);
+}
+
+.tree-node__image-map-zone:hover {
+  fill: rgba(96, 165, 250, 0.38);
+  stroke: rgba(191, 219, 254, 1);
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.45));
+}
+
+.tree-node__image-map-zone:focus {
+  outline: none;
+}
+
+.tree-node__image-map-zone:focus-visible {
+  fill: rgba(96, 165, 250, 0.42);
+  stroke: rgba(253, 224, 71, 0.95);
+}
+
+.tree-node__image-map-zone-label {
+  fill: #f8fafc;
+  font-weight: 800;
+  paint-order: stroke fill;
+  stroke: rgba(2, 6, 23, 0.72);
+  stroke-width: 4px;
+  pointer-events: none;
+}
+
+/* Hide the children's grid visually while polygons are interactive; keep
+ * the grid in-flow so layout + FLIP registrations stay valid (`visibility`
+ * preserves layout; `display: none` does not).
+ * Explicit class avoids reliance on `:has(...)`, which is harder to tune
+ * and was missing in older browsers targeted by CI / polyfill gaps. */
+.tree-node--leaf-big.tree-node--image-map-leaf > .tree-node__content {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ---- Parent fade-out -----------------------------------------------------

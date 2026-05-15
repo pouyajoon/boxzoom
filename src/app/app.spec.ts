@@ -400,5 +400,47 @@ describe('App', () => {
       expect(a1!.classList.contains('tree-node--big')).toBe(false);
       expect(a1!.classList.contains('tree-node--small')).toBe(true);
     });
+
+    it('should show image-map polygons and zoom into mapped child (uniqdom)', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => dataImageMapRoot,
+      }));
+
+      TestBed.configureTestingModule({
+        imports: [UniqDomViewer],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              data: of({ dataset: 'data3', mode: 'uniqdom' }),
+            },
+          },
+        ],
+      });
+
+      const fixture = TestBed.createComponent(UniqDomViewer);
+      fixture.componentInstance.ngOnInit();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelectorAll('.tree-node__image-map-zone').length).toBe(2);
+
+      const zone = compiled.querySelector('.tree-node__image-map-zone');
+      zone?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      const alphaBig = compiled.querySelector<HTMLElement>(
+        '.tree-node.tree-node--leaf-big[aria-label="Alpha"]',
+      );
+      expect(alphaBig).not.toBeNull();
+      /* Parent map-root keeps its polygons in the DOM (hidden ancestor map); only count zones on the current leaf's interactive map. */
+      expect(
+        compiled.querySelectorAll('.tree-node--leaf-big .tree-node__image-map--leaf .tree-node__image-map-zone')
+          .length,
+      ).toBe(0);
+    });
   });
 });

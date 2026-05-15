@@ -4,6 +4,9 @@
   [class.tree-node--big]="isBig()"
   [class.tree-node--small]="!isBig()"
   [class.tree-node--leaf-big]="isLeafBig()"
+  [class.tree-node--has-image-map]="!!resolvedImageMap()"
+  [class.tree-node--image-map-leaf]="isLeafBig() && !!resolvedImageMap()"
+  [class.tree-node--has-tile-photo]="!!photoOnlySmallPreview()"
   [class.tree-node--root]="isRoot"
   [class.tree-node--sibling-faded]="isSiblingFaded()"
   [attr.role]="isBig() ? null : 'button'"
@@ -13,7 +16,90 @@
   (click)="onClick($event)"
   (keydown)="onKeydown($event)"
 >
+  <!--
+    Stable DOM for image-map nodes (e.g. Factory 1): label → same <svg> → children.
+    The SVG stays mounted from small tile through leaf-big; only CSS + a few
+    attrs change (thumbnail vs interactive floor), so zoom continuity is not
+    broken by swapping a preview SVG for a different map SVG.
+  -->
   <span class="tree-node__label">{{ node.id }}</span>
+
+  <svg
+    *ngIf="resolvedImageMap() as im"
+    class="tree-node__image-map animate__animated animate__fadeIn"
+    [class.tree-node__image-map--leaf]="isLeafBig()"
+    [class.tree-node__image-map--ancestor]="isBig() && !isLeafBig()"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    [attr.viewBox]="'0 0 ' + im.viewWidth + ' ' + im.viewHeight"
+    [attr.preserveAspectRatio]="isLeafBig() ? 'xMidYMax meet' : 'xMidYMid slice'"
+    role="group"
+    [attr.aria-label]="'Map for ' + node.id"
+  >
+    <image
+      class="tree-node__image-map-photo"
+      [attr.href]="im.imageUrl"
+      [attr.xlink:href]="im.imageUrl"
+      x="0"
+      y="0"
+      [attr.width]="im.viewWidth"
+      [attr.height]="im.viewHeight"
+      [attr.preserveAspectRatio]="isLeafBig() ? 'xMidYMax meet' : 'xMidYMid slice'"
+      tabindex="-1"
+    />
+    <g
+      *ngFor="let zone of im.zones; let zIndex = index; trackBy: trackByZoneChildId"
+      class="tree-node__image-map-zone-group"
+      [class.animate__animated]="isLeafBig()"
+      [class.animate__jackInTheBox]="isLeafBig()"
+      [style.--child-index]="zIndex"
+    >
+      <polygon
+        class="tree-node__image-map-zone"
+        [attr.points]="zone.pointsAttr"
+        [attr.aria-label]="zone.child.id"
+        [attr.role]="isLeafBig() ? 'button' : null"
+        [attr.tabindex]="isLeafBig() ? 0 : -1"
+        [attr.title]="zone.tooltip"
+        (click)="onImageZoneClick($event, zone.child)"
+        (keydown)="onImageZoneKeydown($event, zone.child)"
+      />
+      <text
+        class="tree-node__image-map-zone-label"
+        pointer-events="none"
+        [attr.x]="zone.labelCenterX"
+        [attr.y]="zone.labelCenterY"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        [attr.font-size]="imageMapLabelFont(im.viewWidth)"
+      >
+        {{ zone.label }}
+      </text>
+    </g>
+  </svg>
+
+  <!-- Photo thumbnail only when there is no image map (map uses the single SVG above). -->
+  <svg
+    *ngIf="photoOnlySmallPreview() as pv"
+    class="tree-node__tile-preview-svg"
+    [attr.viewBox]="'0 0 ' + pv.viewWidth + ' ' + pv.viewHeight"
+    preserveAspectRatio="xMidYMid slice"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    aria-hidden="true"
+  >
+    <image
+      class="tree-node__tile-preview-photo"
+      [attr.href]="pv.href"
+      [attr.xlink:href]="pv.href"
+      x="0"
+      y="0"
+      [attr.width]="pv.viewWidth"
+      [attr.height]="pv.viewHeight"
+      preserveAspectRatio="xMidYMid slice"
+      tabindex="-1"
+    />
+  </svg>
 
   <div class="tree-node__content" *ngIf="node.children.length > 0">
     <app-tree-node

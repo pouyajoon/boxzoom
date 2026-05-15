@@ -37,8 +37,25 @@ export class TreeStateService {
     this.currentPath.set(path);
   }
 
-  zoomInto(parentPath: readonly string[], childId: string): void {
-    this.setPath([...parentPath, childId]);
+  /**
+   * Zoom into `childId` under `parentPath`.
+   *
+   * When the click originates from somewhere other than the child's own
+   * registered box (e.g. a polygon on the parent's image map), pass
+   * `overrideOldRect` so the child's FLIP animation grows from that exact
+   * starting rect instead of from wherever the child's hidden tile happens
+   * to be in the DOM.
+   */
+  zoomInto(
+    parentPath: readonly string[],
+    childId: string,
+    overrideOldRect?: DOMRect,
+  ): void {
+    this.snapshotRects();
+    if (overrideOldRect) {
+      this.prePathRects.set(childId, overrideOldRect);
+    }
+    this.currentPath.set([...parentPath, childId]);
   }
 
   goBack(): void {
