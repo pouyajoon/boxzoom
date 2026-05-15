@@ -132,13 +132,13 @@ const UNIQ_FLIP_EASE = 'ease-in-out';
  *   - `UNIQ_JACK_BASE_DELAY_MS`: shifts every child's animation forward so it
  *     starts after the parent FLIP has visibly begun (otherwise the jack
  *     plays while the parent box is still scaled down by the FLIP inverse
- *     and the children pop in essentially invisibly). With the FLIP at 1s,
- *     ~400ms keeps the children appearing during the second half of the
- *     parent's grow.
+ *     and the children pop in essentially invisibly). Scaled with UNIQ_FLIP_MS
+ *     (~40% of the FLIP) so children still appear during the second half of
+ *     the parent's grow.
  */
 const UNIQ_JACK_MS = 600;
 const UNIQ_JACK_STAGGER_MS = 80;
-const UNIQ_JACK_BASE_DELAY_MS = 400;
+const UNIQ_JACK_BASE_DELAY_MS = Math.round(UNIQ_FLIP_MS * 0.4);
 
 /**
  * Recursive viewer for a single tree node.

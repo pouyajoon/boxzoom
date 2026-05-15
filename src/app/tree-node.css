@@ -67,7 +67,8 @@
   --flip-ease: ease-in-out;
 
   --chrome-fade-duration: 400ms;
-  --reveal-delay: 320ms;
+  /* ~32% of --flip-duration — children / map fade in after the grow has started */
+  --reveal-delay: 160ms;
   --reveal-duration: 240ms;
   --hide-duration: 220ms;
   --hover-duration: 160ms;
@@ -191,8 +192,8 @@
  * the user perceives as "the tile's label moves into the title position". */
 .tree-node--big .tree-node__label {
   top: 24px;
-  left: 24px;
-  right: 24px;
+  left: 0;
+  right: 0;
   transform: translateY(0);
   font-size: clamp(1rem, 2.6vw, 1.5rem);
 }
@@ -339,14 +340,14 @@
 .tree-node--leaf-big.tree-node--has-image-map > .tree-node__image-map.tree-node__image-map--leaf {
   position: absolute;
   top: 96px;
-  left: 24px;
-  right: 24px;
+  left: 0;
+  right: 0;
   bottom: 24px;
   z-index: 1;
   display: block;
   width: auto;
   height: auto;
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
   pointer-events: auto;
